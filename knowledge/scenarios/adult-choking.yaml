@@ -1,0 +1,98 @@
+# Choking in an adult (foreign body airway obstruction), for a layperson. Escalating approach of
+# the ERC 2025 First Aid guideline: cough, then back blows, then abdominal thrusts, then the two
+# alternating; CPR when the person becomes unresponsive. Wording is Polish and meant to be read
+# aloud (numbers in words); ids, structure and comments are English.
+#
+# NOTE FOR REVIEW: the guideline says to call the emergency number after five abdominal thrusts
+# have not helped. The project safety rule is to call first at any threat to life; the system
+# prompt keeps asking for the call, and the step `call_and_alternate` does not delay it if
+# someone else is present.
+id: adult-choking
+title: Zadławienie osoby dorosłej
+trigger: >-
+  Dorosły nagle nie może mówić ani kaszleć, dusi się, łapie się za szyję, zwłaszcza podczas
+  jedzenia.
+level: layperson
+start: recognise
+
+steps:
+  - id: recognise
+    instructions:
+      - Zapytaj poszkodowanego, czy się dławi.
+    transitions:
+      - when: poszkodowany potwierdza, że się dławi, albo nie może mówić ani kaszleć
+        goto: encourage_cough
+    sources:
+      - {source: erc-2025-first-aid, section: Choking in an adult}
+
+  - id: encourage_cough
+    actions: [ENCOURAGE_COUGH]
+    instructions:
+      - Zachęcaj poszkodowanego do kaszlu.
+    transitions:
+      - when: poszkodowany skutecznie kaszle
+        goto: encourage_cough
+      - when: przeszkoda usunięta, poszkodowany oddycha i mówi
+        goto: relieved
+      - when: poszkodowany nie może kaszleć albo kaszel jest nieskuteczny
+        goto: back_blows
+    sources:
+      - {source: erc-2025-first-aid, section: Choking in an adult}
+      - {source: erc-2025-brochure-pl, section: Zadławienie}
+
+  - id: back_blows
+    actions: [BACK_BLOWS]
+    instructions:
+      - Wykonaj do pięciu uderzeń w plecy, w okolicę między łopatkami.
+    transitions:
+      - when: przeszkoda usunięta
+        goto: relieved
+      - when: uderzenia w plecy nie pomogły
+        goto: abdominal_thrusts
+    sources:
+      - {source: erc-2025-first-aid, section: Choking in an adult}
+      - {source: erc-2025-brochure-pl, section: Zadławienie}
+
+  - id: abdominal_thrusts
+    actions: [ABDOMINAL_THRUSTS]
+    instructions:
+      - Wykonaj do pięciu uciśnięć nadbrzusza.
+    transitions:
+      - when: przeszkoda usunięta
+        goto: relieved
+      - when: uciśnięcia nadbrzusza nie pomogły
+        goto: call_and_alternate
+    sources:
+      - {source: erc-2025-first-aid, section: Choking in an adult}
+      - {source: erc-2025-brochure-pl, section: Zadławienie}
+
+  - id: call_and_alternate
+    actions: [CALL_EMERGENCY, BACK_BLOWS, ABDOMINAL_THRUSTS]
+    instructions:
+      - Zadzwoń pod sto dwanaście albo poproś kogoś, żeby zadzwonił. Włącz tryb głośnomówiący.
+      - Dalej wykonuj naprzemiennie pięć uderzeń w plecy i pięć uciśnięć nadbrzusza, aż przeszkoda zostanie usunięta albo poszkodowany straci przytomność.
+      - Nie wyciągaj przeszkody z ust palcami na ślepo.
+    transitions:
+      - when: przeszkoda usunięta
+        goto: relieved
+      - when: poszkodowany stracił przytomność
+        goto: unresponsive
+    sources:
+      - {source: erc-2025-first-aid, section: Choking in an adult}
+
+  - id: unresponsive
+    instructions:
+      - Poszkodowany stracił przytomność. Upewnij się, że wezwano pogotowie pod numer sto dwanaście, i od razu zacznij RKO.
+    transitions:
+      - when: zawsze
+        handoff: adult-bls/chest_compressions
+    sources:
+      - {source: erc-2025-first-aid, section: Choking in an adult}
+      - {source: erc-2025-brochure-pl, section: Zadławienie}
+
+  - id: relieved
+    instructions:
+      - Dobrze. Poszkodowany powinien zostać zbadany przez lekarza lub ratownika, nawet jeśli czuje się dobrze, bo po uciśnięciach mogą wystąpić powikłania.
+    transitions: []
+    sources:
+      - {source: erc-2025-first-aid, section: Choking in an adult}

@@ -7,11 +7,12 @@ services:
       - path: .env             # optional: the stack runs without it
         required: false
     environment:
-      APP_CONFIG: ${APP_CONFIG:-configs/base.yaml}
+      APP_CONFIG: ${APP_CONFIG:-configs/experiments/qwen25-7b-compose.yaml}
       DEV_MODE: ${DEV_MODE:-true}   # serves /dev; set DEV_MODE=false outside local development
     volumes:
       - ./configs:/app/configs
       - ./prompts:/app/prompts
+      - ../../knowledge:/knowledge:ro   # config path ../../knowledge resolves to it from /app
     depends_on:
       redis: { condition: service_started }
       llm-pull: { condition: service_completed_successfully }   # start once the model is ready
@@ -34,7 +35,7 @@ services:
     image: voice-assistant     # same image as `app`
     command: ["python", "-m", "app.tools.pull_model"]
     environment:
-      APP_CONFIG: ${APP_CONFIG:-configs/base.yaml}
+      APP_CONFIG: ${APP_CONFIG:-configs/experiments/qwen25-7b-compose.yaml}
     volumes:
       - ./configs:/app/configs
     depends_on:

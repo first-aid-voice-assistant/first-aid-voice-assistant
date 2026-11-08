@@ -1,0 +1,16 @@
+# Qwen2.5 7B Instruct Q4_K_M (about 4.7 GB) in the Ollama container of the compose stack (app container reaches it as http://llm:11434).
+# Run: APP_CONFIG=configs/experiments/qwen25-7b-compose.yaml docker compose up -d app
+# Pull once: docker compose exec llm ollama pull qwen2.5:7b-instruct-q4_K_M
+asr:
+  provider: openai_compat
+  params: { base_url: "http://asr:8000/v1", model: large-v3, language: pl }
+  hotwords_file: configs/domain_terms.txt
+llm:
+  provider: litellm
+  params:
+    model: "ollama_chat/qwen2.5:7b-instruct-q4_K_M"
+    api_base: "http://llm:11434"
+    temperature: 0.2
+rag: { enabled: false }
+knowledge: { enabled: true, path: ../../knowledge }
+prompts: { system: prompts/system_v1.md, knowledge: prompts/scenario_v1.yaml }

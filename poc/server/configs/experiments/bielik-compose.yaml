@@ -1,0 +1,15 @@
+# Bielik 4.5B v3 for the docker compose stack (app container reaches Ollama as http://llm:11434).
+# Run: APP_CONFIG=configs/experiments/bielik-compose.yaml docker compose up -d app
+asr:
+  provider: openai_compat
+  params: { base_url: "http://asr:8000/v1", model: large-v3, language: pl }
+  hotwords_file: configs/domain_terms.txt
+llm:
+  provider: litellm
+  params:
+    model: "ollama_chat/hf.co/speakleash/Bielik-4.5B-v3.0-Instruct-GGUF:Q8_0"
+    api_base: "http://llm:11434"
+    temperature: 0.1
+rag: { enabled: false }
+knowledge: { enabled: true, path: ../../knowledge }
+prompts: { system: prompts/system_v1.md, knowledge: prompts/scenario_v1.yaml }

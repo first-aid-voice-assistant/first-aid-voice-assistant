@@ -1,8 +1,9 @@
 """Chat over a WebSocket: the answer is streamed while it is generated.
 
-The connection is only a transport. The client keeps the conversation and sends the history
-with every question, so the server holds no session state. One answer runs at a time: a new
-question or a `cancel` stops the one in progress (e.g. when the user starts speaking again).
+The client keeps the conversation and sends the history with every question. The only state
+the server holds is the position in the first-aid scenario (`ScenarioDialogue`), for as long as
+the connection lives. One answer runs at a time: a new question or a `cancel` stops the one in
+progress (e.g. when the user starts speaking again).
 """
 
 import asyncio
@@ -14,6 +15,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
+from app.knowledge import ScenarioDialogue
 from app.pipeline.prompt import build_prompt
 from app.providers.base import LLMDelta, LLMDone, LLMOptions, LLMProvider, Message
 
@@ -71,10 +73,17 @@ ServerEvent = DeltaEvent | DoneEvent | CancelledEvent | ErrorEvent
 
 
 class _ChatSession:
-    def __init__(self, ws: WebSocket, llm: LLMProvider, system_prompt: str) -> None:
+    def __init__(
+        self,
+        ws: WebSocket,
+        llm: LLMProvider,
+        system_prompt: str,
+        dialogue: ScenarioDialogue | None = None,
+    ) -> None:
         self._ws = ws
         self._llm = llm
         self._system_prompt = system_prompt
+        self._dialogue = dialogue
         # Answers stream from a task while the receive loop keeps reading; the lock keeps
         # their frames from interleaving with frames sent by the loop.
         self._send_lock = asyncio.Lock()
@@ -117,16 +126,22 @@ class _ChatSession:
 
     async def _answer(self, msg: AskMessage) -> None:
         history = [Message(role=m.role, content=m.content) for m in msg.history]
-        messages = build_prompt(self._system_prompt, history, msg.text)
         started = time.perf_counter()
         first_token_ms: int | None = None
         try:
+            task = None
+            if self._dialogue is not None:
+                task = await self._dialogue.begin_turn(msg.text, history)
+            messages = build_prompt(self._system_prompt, history, msg.text, task)
             async for ev in self._llm.generate_stream(messages, LLMOptions()):
                 if isinstance(ev, LLMDelta):
                     if first_token_ms is None:
                         first_token_ms = _elapsed_ms(started)
                     await self._send(DeltaEvent(id=msg.id, text=ev.text))
                 elif isinstance(ev, LLMDone):
+                    # Before sending, so that a quick next question cannot overtake it.
+                    if self._dialogue is not None:
+                        self._dialogue.turn_completed()
                     await self._send(
                         DoneEvent(
                             id=msg.id,
@@ -157,4 +172,6 @@ def _elapsed_ms(started: float) -> int:
 async def chat(ws: WebSocket) -> None:
     await ws.accept()
     state = ws.app.state
-    await _ChatSession(ws, state.llm, state.system_prompt).run()
+    knowledge = state.knowledge
+    dialogue = knowledge.dialogue(state.llm) if knowledge is not None else None
+    await _ChatSession(ws, state.llm, state.system_prompt, dialogue).run()

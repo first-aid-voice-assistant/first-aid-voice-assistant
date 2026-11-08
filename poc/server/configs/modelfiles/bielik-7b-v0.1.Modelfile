@@ -1,0 +1,12 @@
+# Bielik 7B Instruct v0.1 uses the Mistral [INST] format, but Ollama picks a wrong (Cohere) template for the GGUF.
+# Create once: docker compose cp configs/modelfiles/bielik-7b-v0.1.Modelfile llm:/root/Modelfile && docker compose exec llm ollama create bielik-7b-v01 -f /root/Modelfile
+FROM hf.co/speakleash/Bielik-7B-Instruct-v0.1-GGUF:Q4_K_M
+TEMPLATE """{{- range $i, $_ := .Messages }}
+{{- if eq .Role "user" }}[INST] {{ if and (eq $i 0) $.System }}{{ $.System }}
+
+{{ end }}{{ .Content }} [/INST]
+{{- else if eq .Role "assistant" }}{{ .Content }}</s>
+{{- end }}
+{{- end }}"""
+PARAMETER stop "</s>"
+PARAMETER stop "[INST]"

@@ -14,7 +14,7 @@ Status: start screen, on-device speech recognition with three selectable engines
 
 - Requests to the server and responses from it follow the server API (Pydantic models in `poc/server`, browsable at `/docs` of the running server). Event-log entries follow `docs/project/architecture.md`.
 - Event timestamps are taken at the **end of the utterance**, not when the server answers – otherwise server latency distorts the times compared with the reference log in the evaluation.
-- The state of the action (conversation, event history, current scenario step) is kept in the app and sent with every request; the server does not keep sessions. An interrupted answer goes into the history only as far as it was spoken.
+- The conversation and the event history are kept in the app and sent with every request. For now the PoC server also keeps the current scenario step for the length of one WebSocket connection (a reconnect restarts the scenario); moving the step to the app and sending it with every request is the target. An interrupted answer goes into the history only as far as it was spoken.
 - Model files (speech recognition and voice weights) are not committed; their URLs, sizes and SHA-256 checksums are pinned in `lib/domain/models/speech_engine.dart` and `voice_engine.dart` and listed in `README.md`.
 - No comments in `lib/`; the code should explain itself through names. Non-obvious build workarounds in `android/` keep a short comment.
 - Coding conventions: [docs/conventions.md](docs/conventions.md).

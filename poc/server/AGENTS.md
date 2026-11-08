@@ -4,11 +4,11 @@ Project-wide rules (language, domain and safety, data, documentation) are in the
 
 Voice assistant backend (ASR → LLM, with RAG as a disabled, optional stage). A modular monolith (FastAPI) plus open-source models in separate containers (Ollama/vLLM, faster-whisper server) or commercial APIs behind the same provider interfaces. There is no audio/ASR layer on the server: the mobile app recognises speech and talks to the model over `WS /v1/chat` (streamed answer, cancelling, history sent with every question); the dev-only `POST /dev/chat` is for quick tests.
 
-Status: streamed chat over a WebSocket for the mobile app (LiteLLM + fake providers; the app keeps the conversation). Not yet: ASR/audio, sessions on the server, event log, authentication.
+Status: streamed chat over a WebSocket for the mobile app (LiteLLM + fake providers; the app keeps the conversation, the server keeps the position in the first-aid scenario for the length of one connection). Not yet: ASR/audio, sessions that outlive a connection, event log, authentication.
 
 ## Safety in this part
 
-- The system prompt (`prompts/system_v1.md`) carries the safety rules from the root `AGENTS.md`. Do not weaken or remove them; any prompt change must be re-checked against them.
+- The system prompt (`prompts/system_v1.md`) carries the safety rules from the root `AGENTS.md`. `prompts/scenario_v1.yaml` is part of the prompt the model gets; the same applies to it. Do not weaken or remove the rules; any prompt change must be re-checked against them.
 - Errors must surface as an explicit error response so that clients can show their "call 112" fallback.
 
 ## Dev client
@@ -18,10 +18,10 @@ With `DEV_MODE=true` the app serves a test page at `/dev` and `POST /dev/chat` (
 ## Directory map
 
 - `app/api/` – REST, the chat WebSocket (`ws.py`), dev test endpoint/page; `app/core/` – config, logging
-- `app/pipeline/` – prompt building (orchestration comes later)
+- `app/pipeline/` – prompt building (orchestration comes later); `app/knowledge/` – loads and validates the scenarios of `knowledge/` and walks through them one instruction at a time (`dialogue.py`)
 - `app/providers/` – interfaces (`base.py`), registry (`registry.py`), adapters in `asr/ llm/ embeddings/ tts/`
 - `app/rag/` – empty for now (planned: `Retriever` + `NullRetriever`)
-- `configs/` – `base.yaml`, `experiments/`; `prompts/` – system prompts
+- `configs/` – `base.yaml`, `experiments/`; `prompts/` – system prompt and `scenario_v1.yaml` (wording of the guided conversation)
 - `tests/unit`, `tests/contract`
 - `docs/` – architecture and coding conventions of the server
 - Shared with other parts (repository root): `knowledge/`, `eval/`

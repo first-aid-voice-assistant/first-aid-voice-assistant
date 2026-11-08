@@ -16,14 +16,23 @@ class RAGConfig(BaseModel):
     enabled: bool = False
 
 
+class KnowledgeConfig(BaseModel):
+    """Scenarios from `knowledge/` put into the system prompt (see app/knowledge)."""
+
+    enabled: bool = False
+    path: str = "../../knowledge"  # repository root's knowledge/, relative to poc/server/
+
+
 class PromptsConfig(BaseModel):
     system: str
+    knowledge: str | None = None  # template of the knowledge section; needed when it is enabled
 
 
 class AppConfig(BaseModel):
     asr: ProviderConfig
     llm: ProviderConfig
     rag: RAGConfig = Field(default_factory=RAGConfig)
+    knowledge: KnowledgeConfig = Field(default_factory=KnowledgeConfig)
     prompts: PromptsConfig
 
 

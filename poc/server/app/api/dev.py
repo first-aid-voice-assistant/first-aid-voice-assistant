@@ -1,4 +1,7 @@
-"""Dev-only test endpoint: send a transcript, get the model's answer. Stateless, no history."""
+"""Dev-only test endpoint: send a transcript, get the model's answer.
+
+Stateless, no history: every request starts a scenario from the beginning.
+"""
 
 import logging
 import time
@@ -33,10 +36,13 @@ async def dev_page() -> str:
 @router.post("/dev/chat")
 async def chat(req: ChatRequest, request: Request) -> ChatResponse:
     state = request.app.state
-    messages = build_prompt(state.system_prompt, [], req.text)
     started = time.perf_counter()
     answer = ""
     try:
+        task = None
+        if state.knowledge is not None:
+            task = await state.knowledge.dialogue(state.llm).begin_turn(req.text, [])
+        messages = build_prompt(state.system_prompt, [], req.text, task)
         async for ev in state.llm.generate_stream(messages, LLMOptions()):
             if isinstance(ev, LLMDone):
                 answer = ev.text

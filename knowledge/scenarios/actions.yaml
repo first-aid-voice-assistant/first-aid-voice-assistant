@@ -1,0 +1,67 @@
+# Dictionary of rescue actions. The codes are shared with the event log and the reference logs
+# in eval/. Synonyms are colloquial phrases a rescuer may say; names and synonyms are Polish.
+actions:
+  - code: CHECK_SAFETY
+    name: Ocena bezpieczeństwa miejsca zdarzenia
+    level: layperson
+    synonyms: [sprawdzam czy jest bezpiecznie, rozglądam się, jest bezpiecznie]
+
+  - code: CHECK_RESPONSE
+    name: Sprawdzenie reakcji poszkodowanego
+    level: layperson
+    synonyms: [potrząsam go, pytam czy wszystko w porządku, sprawdzam czy reaguje, wołam go]
+
+  - code: CALL_EMERGENCY
+    name: Wezwanie służb ratunkowych
+    level: layperson
+    synonyms: [dzwonię na sto dwanaście, dzwonię po pogotowie, dzwonię na 112, wezwałem karetkę]
+
+  - code: OPEN_AIRWAY
+    name: Udrożnienie dróg oddechowych (odgięcie głowy i uniesienie brody)
+    level: layperson
+    synonyms: [odchylam głowę, odginam głowę, unoszę brodę, udrażniam drogi oddechowe]
+
+  - code: CHECK_BREATHING
+    name: Sprawdzenie oddechu (patrz, słuchaj, wyczuwaj)
+    level: layperson
+    synonyms: [sprawdzam oddech, słucham czy oddycha, patrzę czy oddycha, nie oddycha]
+
+  - code: SEND_FOR_AED
+    name: Wysłanie kogoś po AED
+    level: layperson
+    synonyms: [wysyłam kogoś po defibrylator, poprosiłem o AED, idę po defibrylator]
+
+  - code: CHEST_COMPRESSIONS
+    name: Uciskanie klatki piersiowej
+    level: layperson
+    synonyms: [uciskam, uciskam klatkę, masaż serca, robię RKO, reanimuję, zaczynam uciski]
+
+  - code: RESCUE_BREATHS
+    name: Oddechy ratownicze
+    level: layperson
+    synonyms: [robię oddechy, usta usta, wdmuchuję powietrze, dwa oddechy]
+
+  - code: AED_ATTACH
+    name: Włączenie AED i przyklejenie elektrod
+    level: layperson
+    synonyms: [włączam defibrylator, przyklejam elektrody, podłączam AED, mam defibrylator]
+
+  - code: AED_SHOCK
+    name: Wykonanie defibrylacji (naciśnięcie przycisku AED)
+    level: layperson
+    synonyms: [daję wyładowanie, naciskam przycisk, defibrylacja, szok]
+
+  - code: ENCOURAGE_COUGH
+    name: Zachęcanie poszkodowanego do kaszlu
+    level: layperson
+    synonyms: [każę mu kaszleć, zachęcam do kaszlu, niech kaszle]
+
+  - code: BACK_BLOWS
+    name: Uderzenia w plecy (okolica międzyłopatkowa)
+    level: layperson
+    synonyms: [uderzam w plecy, klepię po plecach, uderzenia między łopatki]
+
+  - code: ABDOMINAL_THRUSTS
+    name: Uciśnięcia nadbrzusza
+    level: layperson
+    synonyms: [uciskam brzuch, uciśnięcia nadbrzusza, manewr Heimlicha, naciskam na brzuch]

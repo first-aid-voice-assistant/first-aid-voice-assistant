@@ -1,0 +1,16 @@
+# Bielik 7B Instruct v0.1 Q4_K_M (SpeakLeash, Polish, about 4.5 GB) in the Ollama container of the compose stack (app container reaches it as http://llm:11434).
+# Run: APP_CONFIG=configs/experiments/bielik-7b-compose.yaml docker compose up -d app
+# Pull the GGUF, then create bielik-7b-v01 from configs/modelfiles/bielik-7b-v0.1.Modelfile (fixes the chat template).
+asr:
+  provider: openai_compat
+  params: { base_url: "http://asr:8000/v1", model: large-v3, language: pl }
+  hotwords_file: configs/domain_terms.txt
+llm:
+  provider: litellm
+  params:
+    model: "ollama_chat/bielik-7b-v01"
+    api_base: "http://llm:11434"
+    temperature: 0.2
+rag: { enabled: false }
+knowledge: { enabled: true, path: ../../knowledge }
+prompts: { system: prompts/system_v1.md, knowledge: prompts/scenario_v1.yaml }

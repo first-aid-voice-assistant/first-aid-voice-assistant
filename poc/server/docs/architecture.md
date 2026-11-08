@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Created** | 2026-10-26 |
-| **Version** | 0.2 |
+| **Version** | 0.3 |
 
 ## Purpose
 
@@ -27,6 +27,7 @@ request ──▶ │ api/  ──▶ pipeline/prompt.py ──▶ providers/reg
 | `app/api/ws.py` | `WS /v1/chat`: the mobile app's chat – streams the answer, cancels it on request (see below). |
 | `app/api/dev.py` | Dev-only `GET /dev` (test page) and `POST /dev/chat`, mounted only when `DEV_MODE=true`. |
 | `app/pipeline/prompt.py` | Builds the message list: system prompt + history + user text. |
+| `app/knowledge/` | Loads and validates `knowledge/` (`loader.py`, `models.py`), reads the wording of the guided conversation (`prompts.py`) and walks through a scenario one instruction at a time (`dialogue.py`). |
 | `app/providers/base.py` | Provider interfaces and data types (`Message`, `LLMOptions`, `LLMDelta`, `LLMDone`, `LLMProvider`). |
 | `app/providers/registry.py` | Maps the provider name from the config to a class (`@register_llm("<name>")`, `build_llm`). |
 | `app/providers/llm/` | LLM adapters: `litellm` (Ollama, vLLM, commercial APIs) and `fake` (tests, no model; `delay` imitates a slow model). |
@@ -48,9 +49,20 @@ Used by the mobile app. Messages are JSON objects with a `type`.
 | server → app | `error` | `id` (or `null` for an invalid message), `message` | The model failed or the message was invalid; the connection stays open |
 
 1. `api/ws.py` reads messages in a loop; each `ask` starts a task that streams the answer, so the loop keeps reading and can cancel it.
-2. `pipeline/prompt.py` builds `[system prompt, *history, question]`. The history comes from the app with every question – the server keeps no conversation state.
+2. `pipeline/prompt.py` builds `[system prompt, *history, question]`. The history comes from the app with every question; the only state the server keeps is the position in the scenario (see Guided scenarios), for as long as the connection lives.
 3. Every `LLMDelta` is sent as `delta`; the final `LLMDone` as `done`. A model failure becomes `error`, so the app can say "call 112".
 4. A new `ask`, a `cancel` or a closed connection cancels the streaming task, which stops the model call.
+
+## Guided scenarios
+
+The scenarios of `knowledge/` (state machines in YAML; steps may cite their sources) are the assistant's only source of procedures. The model never sees a whole procedure: the server walks through the scenario and tells the model, in every turn, the one thing to say next. This is what makes the assistant say one instruction, wait for the answer and only then give the next one.
+
+1. At start-up `main.py` builds a `KnowledgeRuntime`: `load_knowledge` (path from `knowledge.path`) checks that every transition and action exists and that every step is reachable, and, if `knowledge/sources/` has files, that every cited source and section exists; `load_scenario_prompts` reads the wording from `prompts/scenario_v1.yaml`. Otherwise the server does not start. The rules from that file are appended once to the system prompt.
+2. Every WebSocket connection gets its own `ScenarioDialogue` (`app/knowledge/dialogue.py`), which holds the cursor: scenario, step and the index of the next thing to say. Before every answer `begin_turn` returns the task for the model ("say this instruction", "repeat", "no procedure yet" or "the procedure is finished"), which `ws.py` appends to the system prompt of that turn. It stays one system message.
+3. Inside a step the cursor moves on by itself: the user's next words are taken as "done". A step says its instructions one per turn, then its question (`asks`). When everything in a step has been said, a short side call to the model gets the user's answer and the numbered transitions of the step and returns one digit; `0`, a number out of range or any reply that is not a bare digit (punctuation around it is fine) means "no transition yet", and the assistant repeats instead of guessing. The first turn chooses the scenario the same way, from `trigger`.
+4. The cursor moves only when the model has finished the answer, so an interrupted answer is said again.
+
+Limits: the state lives only as long as the WebSocket connection (a reconnect restarts the scenario); the assistant assumes the user did what it asked when they speak again; each choice of a transition costs one extra model call before the answer starts. `POST /dev/chat` is stateless, so each request starts a scenario from its beginning.
 
 ## Request flow (`POST /dev/chat`)
 
@@ -62,6 +74,7 @@ Used by the mobile app. Messages are JSON objects with a `type`.
 ## Configuration
 
 - `configs/*.yaml` select the providers and their parameters (`APP_CONFIG` picks the file): `base.yaml` (Docker), `gemma.yaml` (app on the host, Gemma 3 1B in the Ollama container), `bielik.yaml` (app on the host, Bielik 4.5B v3 in the Ollama container), `fake.yaml` (no model, streams a fixed Polish answer word by word with a delay – for UI work and trying the app; tests swap in an echoing fake).
+- `knowledge: {enabled, path}` and `prompts.knowledge` turn on the scenarios from `knowledge/`; in Docker the folder is mounted read-only at `/knowledge`, which is where `../../knowledge` points from `/app`.
 - `.env` holds secrets and environment settings (`DEV_MODE`, API keys, `REDIS_URL`).
 - Experiments with other models go to `configs/experiments/`.
 
@@ -81,7 +94,7 @@ Used by the mobile app. Messages are JSON objects with a `type`.
 ## Not implemented yet
 
 - ASR / audio input (in the demo, speech recognition is planned on the phone).
-- Sessions on the server, the event log.
+- Sessions that outlive a WebSocket connection (the scenario position is kept only per connection), the event log.
 - Authentication of the WebSocket (PoC in a local network only).
 - The analysis endpoint for the mobile app (recognised actions and the next step).
 - RAG over the knowledge base.
@@ -92,3 +105,4 @@ Used by the mobile app. Messages are JSON objects with a `type`.
 |---|---|---|
 | 0.1 | 2026-10-26 | First version, based on the existing code |
 | 0.2 | 2026-10-29 | `WS /v1/chat` with streamed answers, cancelling and history sent by the app; `gemma.yaml`, `bielik.yaml`; `fake.yaml` streams a fixed answer slowly |
+| 0.3 | 2026-10-29 | Guided scenarios: `app/knowledge/` (loader, validation, `ScenarioDialogue` that gives the model one instruction per turn), `prompts/scenario_v1.yaml`, `knowledge` config section; the server keeps the scenario position per WebSocket connection |

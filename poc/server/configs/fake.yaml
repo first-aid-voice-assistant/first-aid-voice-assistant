@@ -13,4 +13,5 @@ llm:
       Sprawdź, czy poszkodowany oddycha. Jeśli nie oddycha, zacznij uciskać środek klatki
       piersiowej.
 rag: { enabled: false }
-prompts: { system: prompts/system_v1.md }
+knowledge: { enabled: true, path: ../../knowledge }   # scenarios from knowledge/ in the prompt
+prompts: { system: prompts/system_v1.md, knowledge: prompts/scenario_v1.yaml }

@@ -1,0 +1,19 @@
+# Bielik 11B v3.0 Instruct Q4_K_M (SpeakLeash, Polish, about 6.8 GB) from the official Ollama library,
+# so the chat template (ChatML) comes with the model. The app container reaches Ollama as http://llm:11434.
+# Needs about 8-9 GB of free memory for WSL2/Docker: raise `memory` in %UserProfile%\.wslconfig
+# (the default is half of the RAM) and run `wsl --shutdown`. With a 4 GB GPU most layers run on the CPU.
+# Run: APP_CONFIG=configs/experiments/bielik-11b-compose.yaml docker compose up -d --force-recreate app
+# Pull once: docker compose exec llm ollama pull SpeakLeash/bielik-11b-v3.0-instruct:Q4_K_M
+asr:
+  provider: openai_compat
+  params: { base_url: "http://asr:8000/v1", model: large-v3, language: pl }
+  hotwords_file: configs/domain_terms.txt
+llm:
+  provider: litellm
+  params:
+    model: "ollama_chat/SpeakLeash/bielik-11b-v3.0-instruct:Q4_K_M"
+    api_base: "http://llm:11434"
+    temperature: 0.2
+rag: { enabled: false }
+knowledge: { enabled: true, path: ../../knowledge }
+prompts: { system: prompts/system_v1.md, knowledge: prompts/scenario_v1.yaml }
