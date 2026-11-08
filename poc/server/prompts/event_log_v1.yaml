@@ -1,0 +1,22 @@
+# Wording of the call that fills the event log (Polish; the model reads it). Placeholders in braces
+# are filled in by app/eventlog/detector.py. Same safety stance as the rest: when unsure, record
+# nothing - a missing entry is better than an invented one.
+
+# A short side call that returns digits: the actions the user reports as done or being done.
+route_actions: |
+  Asystent prowadzi rozmówcę przez pierwszą pomoc. Zapisujemy dziennik czynności, które rozmówca SAM zgłosił jako wykonane albo właśnie wykonywane.
+
+  Ostatnia wypowiedź asystenta: „{assistant}”
+  Wypowiedź rozmówcy: „{user}”
+
+  Które czynności z listy rozmówca zgłasza jako zrobione lub robione teraz?
+  {options}
+  0. Żadna.
+
+  Zasady:
+  - Polecenie albo pytanie asystenta nie jest czynnością rozmówcy. Liczy się tylko to, co mówi rozmówca.
+  - Krótkie potwierdzenie („tak”, „zrobione”, „już”) dotyczy czynności, o którą prosił asystent w ostatniej wypowiedzi.
+  - Zapowiedź („zaraz zadzwonię”), pytanie, wahanie, odmowa albo przeszkoda („nie mam zasięgu”) to 0.
+  - Jeśli nie masz pewności, odpowiedz 0.
+
+  Odpowiedz samymi cyframi oddzielonymi przecinkami (na przykład 5, 7) albo samym 0, bez żadnych innych słów.
