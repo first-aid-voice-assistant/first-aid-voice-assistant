@@ -36,7 +36,7 @@ poc/server/
 │   │   └── asr/ tts/ embeddings/   # empty for now
 │   ├── rag/                  # empty for now
 │   └── tools/                # helper commands (e.g. pulling the Ollama model)
-├── configs/                  # base.yaml, fake.yaml, gemma.yaml, bielik.yaml, experiments/ (one config per model),
+├── configs/                  # base.yaml, fake.yaml, gemma.yaml, bielik.yaml, qwen.yaml, experiments/ (one config per model),
 │                             # modelfiles/ (Ollama Modelfiles), domain_terms.txt
 ├── prompts/                  # system prompt, scenario wording, event log prompt (versioned files)
 ├── scripts/                  # chat_client.py (one-shot test client), chat_repl.py (interactive chat over WS /v1/chat)
@@ -78,7 +78,7 @@ Without a model (a fixed Polish answer streamed slowly, handy for UI work):
 $env:APP_CONFIG = "configs/fake.yaml"; uv run uvicorn app.main:app --reload
 ```
 
-Running the app locally against the Ollama container: `$env:APP_CONFIG = "configs/gemma.yaml"` (Gemma 3 1B) or `"configs/bielik.yaml"` (Bielik 4.5B v3; pull it once with `docker compose exec llm ollama pull hf.co/speakleash/Bielik-4.5B-v3.0-Instruct-GGUF:Q8_0`).
+Running the app locally against the Ollama container: `$env:APP_CONFIG = "configs/gemma.yaml"` (Gemma 3 1B), `"configs/qwen.yaml"` (Qwen2.5 7B, needs the GPU override) or `"configs/bielik.yaml"` (Bielik 4.5B v3; pull it once with `docker compose exec llm ollama pull hf.co/speakleash/Bielik-4.5B-v3.0-Instruct-GGUF:Q8_0`).
 
 ### Talking to the assistant
 
@@ -105,7 +105,9 @@ The flags apply to a single command. A later plain `docker compose up` recreates
 COMPOSE_FILE=docker-compose.yml;docker-compose.gpu.yml
 ```
 
-Check that Ollama uses it: `docker compose exec llm ollama ps` (column `PROCESSOR`). With a small GPU (e.g. 4 GB) a 7-8B model is split between GPU and CPU.
+Check that Ollama uses it: `docker compose exec llm ollama ps` (column `PROCESSOR`). With a small GPU (e.g. 4 GB) a 7-8B model is split between GPU and CPU, and the share on the GPU decides the speed. The override therefore also sets `OLLAMA_FLASH_ATTENTION=1` and `OLLAMA_KV_CACHE_TYPE=q8_0` (a quantised cache leaves room for more layers on the GPU), `OLLAMA_NUM_PARALLEL=1` (the server's calls queue instead of each taking longer and using more memory) and `OLLAMA_KEEP_ALIVE=30m` (loading a 7B model takes about a minute).
+
+Without the GPU a 7B model can take longer than the 60 s call timeout of the LiteLLM adapter, and the answer fails. `/dev llm` (`scripts/dev.ps1 llm` at the repository root) always starts the container with the override.
 
 ### Changing the model
 

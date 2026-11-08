@@ -1,5 +1,7 @@
 # GPU override. Requires NVIDIA Container Toolkit.
 # Usage: docker compose -f docker-compose.yml -f docker-compose.gpu.yml up
+# Always pass both files (or use scripts/dev.ps1 at the repository root): a plain
+# `docker compose up` recreates `llm` without the GPU and the model then runs on the CPU only.
 x-gpu: &gpu
   deploy:
     resources:
@@ -10,5 +12,15 @@ x-gpu: &gpu
             capabilities: [gpu]
 
 services:
-  llm: *gpu
+  llm:
+    <<: *gpu
+    environment:
+      # Make the most of a small GPU (e.g. 4 GB): a quantised KV cache takes about half the memory,
+      # so more layers of the model fit on the GPU (it needs flash attention). One request at a time
+      # keeps the cache small; the server's calls then queue instead of each taking longer.
+      OLLAMA_FLASH_ATTENTION: "1"
+      OLLAMA_KV_CACHE_TYPE: q8_0
+      OLLAMA_NUM_PARALLEL: "1"
+      # Keep the model in memory between questions: loading a 7B model takes about a minute.
+      OLLAMA_KEEP_ALIVE: 30m
   asr: *gpu

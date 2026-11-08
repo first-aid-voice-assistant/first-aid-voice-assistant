@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Created** | 2026-10-26 |
-| **Version** | 0.4 |
+| **Version** | 0.5 |
 
 ## Purpose
 
@@ -88,9 +88,10 @@ Limits: only actions from the dictionary are recognised; the extra call per utte
 
 ## Configuration
 
-- `configs/*.yaml` select the providers and their parameters (`APP_CONFIG` picks the file): `base.yaml` (Docker), `gemma.yaml` (app on the host, Gemma 3 1B in the Ollama container), `bielik.yaml` (app on the host, Bielik 4.5B v3 in the Ollama container), `fake.yaml` (no model, streams a fixed Polish answer word by word with a delay – for UI work and trying the app; tests swap in an echoing fake).
+- `configs/*.yaml` select the providers and their parameters (`APP_CONFIG` picks the file): `base.yaml` (Docker), `gemma.yaml` (app on the host, Gemma 3 1B in the Ollama container), `bielik.yaml` (app on the host, Bielik 4.5B v3 in the Ollama container), `qwen.yaml` (app on the host, Qwen2.5 7B in the Ollama container; needs the GPU override), `fake.yaml` (no model, streams a fixed Polish answer word by word with a delay – for UI work and trying the app; tests swap in an echoing fake).
 - `knowledge: {enabled, path}` and `prompts.knowledge` turn on the scenarios from `knowledge/`; in Docker the folder is mounted read-only at `/knowledge`, which is where `../../knowledge` points from `/app`.
 - `event_log: {enabled}` and `prompts.event_log` turn on the event log (needs `knowledge`). It is off in the shipped configs until the mobile app handles `action_logged`.
+- `docker-compose.gpu.yml` gives `llm` the GPU and tunes Ollama for a small one (flash attention, quantised KV cache, one request at a time, model kept in memory); without it a 7B model runs on the CPU and exceeds the 60 s call timeout.
 - `.env` holds secrets and environment settings (`DEV_MODE`, API keys, `REDIS_URL`).
 - Experiments with other models go to `configs/experiments/`.
 
@@ -123,3 +124,4 @@ Limits: only actions from the dictionary are recognised; the extra call per utte
 | 0.2 | 2026-10-29 | `WS /v1/chat` with streamed answers, cancelling and history sent by the app; `gemma.yaml`, `bielik.yaml`; `fake.yaml` streams a fixed answer slowly |
 | 0.3 | 2026-10-29 | Guided scenarios: `app/knowledge/` (loader, validation, `ScenarioDialogue` that gives the model one instruction per turn), `prompts/scenario_v1.yaml`, `knowledge` config section; the server keeps the scenario position per WebSocket connection |
 | 0.4 | 2026-11-08 | Event log: `app/eventlog/` (detector, recorder), `spoken_at` in `ask`, `action_logged` event, `event_log` config section, `prompts/event_log_v1.yaml`, `pipeline/completion.py` |
+| 0.5 | 2026-11-08 | `configs/qwen.yaml`; GPU override tuned for a small GPU; command for Claude Code (`/dev`) |
