@@ -15,7 +15,8 @@ from dataclasses import dataclass
 
 from app.knowledge.models import KnowledgeBase, Scenario, Step, Transition
 from app.knowledge.prompts import ScenarioPrompts
-from app.providers.base import LLMDone, LLMOptions, LLMProvider, Message
+from app.pipeline.completion import complete
+from app.providers.base import LLMProvider, Message
 
 _USER_MESSAGES_FOR_ROUTING = 3
 _DIGIT = re.compile(r"\W*(\d+)")
@@ -168,14 +169,7 @@ class ScenarioDialogue:
         self._repeats = 0
 
     async def _complete(self, prompt: str, max_tokens: int) -> str:
-        text = ""
-        messages = [Message(role="user", content=prompt)]
-        async for event in self._llm.generate_stream(
-            messages, LLMOptions(temperature=0.0, max_tokens=max_tokens)
-        ):
-            if isinstance(event, LLMDone):
-                text = event.text
-        return text
+        return await complete(self._llm, prompt, max_tokens)
 
     async def _choose(self, prompt: str, options: int) -> int:
         """Asks the model for one digit; 0 means "none" and is also the answer to anything else."""

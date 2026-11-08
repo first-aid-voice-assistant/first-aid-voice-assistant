@@ -26,6 +26,17 @@ class KnowledgeConfig(BaseModel):
 class PromptsConfig(BaseModel):
     system: str
     knowledge: str | None = None  # template of the knowledge section; needed when it is enabled
+    event_log: str | None = None  # prompts of the event log calls; needed when it is enabled
+
+
+class EventLogConfig(BaseModel):
+    """Rescue actions recognised in the user's words and sent to the client as log entries.
+
+    Needs `knowledge.enabled` (the action dictionary comes from there). Leave it off for
+    clients that do not know the `action_logged` event yet.
+    """
+
+    enabled: bool = False
 
 
 class AppConfig(BaseModel):
@@ -33,6 +44,7 @@ class AppConfig(BaseModel):
     llm: ProviderConfig
     rag: RAGConfig = Field(default_factory=RAGConfig)
     knowledge: KnowledgeConfig = Field(default_factory=KnowledgeConfig)
+    event_log: EventLogConfig = Field(default_factory=EventLogConfig)
     prompts: PromptsConfig
 
 

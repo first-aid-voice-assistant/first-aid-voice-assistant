@@ -7,6 +7,7 @@ One short file per decision that affects the architecture or the technology stac
 | No. | Decision | Status |
 |---|---|---|
 | [0001](0001-flutter-for-mobile-app.md) | Flutter for the mobile app | accepted |
+| [0002](0002-event-log-detection.md) | Event log: the server recognises actions, the phone keeps the log | accepted |
 
 ## Template
 

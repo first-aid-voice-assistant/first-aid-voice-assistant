@@ -4,7 +4,7 @@ Project-wide rules (language, domain and safety, data, documentation) are in the
 
 Voice assistant backend (ASR → LLM, with RAG as a disabled, optional stage). A modular monolith (FastAPI) plus open-source models in separate containers (Ollama/vLLM, faster-whisper server) or commercial APIs behind the same provider interfaces. There is no audio/ASR layer on the server: the mobile app recognises speech and talks to the model over `WS /v1/chat` (streamed answer, cancelling, history sent with every question); the dev-only `POST /dev/chat` is for quick tests.
 
-Status: streamed chat over a WebSocket for the mobile app (LiteLLM + fake providers; the app keeps the conversation, the server keeps the position in the first-aid scenario for the length of one connection). Not yet: ASR/audio, sessions that outlive a connection, event log, authentication.
+Status: streamed chat over a WebSocket for the mobile app (LiteLLM + fake providers; the app keeps the conversation, the server keeps the position in the first-aid scenario for the length of one connection). The event log (the server recognises the actions the user reports and sends them as `action_logged`; the phone keeps the log; ADR 0002) is implemented but off in the shipped configs until the mobile app handles it. Not yet: ASR/audio, sessions that outlive a connection, authentication.
 
 ## Safety in this part
 
@@ -18,10 +18,10 @@ With `DEV_MODE=true` the app serves a test page at `/dev` and `POST /dev/chat` (
 ## Directory map
 
 - `app/api/` – REST, the chat WebSocket (`ws.py`), dev test endpoint/page; `app/core/` – config, logging
-- `app/pipeline/` – prompt building (orchestration comes later); `app/knowledge/` – loads and validates the scenarios of `knowledge/` and walks through them one instruction at a time (`dialogue.py`)
+- `app/pipeline/` – prompt building and `complete()` for short side calls (orchestration comes later); `app/eventlog/` – the event log: entry model, action detector, recorder (see ADR 0002); `app/knowledge/` – loads and validates the scenarios of `knowledge/` and walks through them one instruction at a time (`dialogue.py`)
 - `app/providers/` – interfaces (`base.py`), registry (`registry.py`), adapters in `asr/ llm/ embeddings/ tts/`
 - `app/rag/` – empty for now (planned: `Retriever` + `NullRetriever`)
-- `configs/` – `base.yaml`, `experiments/`; `prompts/` – system prompt and `scenario_v1.yaml` (wording of the guided conversation)
+- `configs/` – `base.yaml`, `experiments/`; `prompts/` – system prompt, `scenario_v1.yaml` (wording of the guided conversation) and `event_log_v1.yaml` (the call that recognises actions)
 - `tests/unit`, `tests/contract`
 - `docs/` – architecture and coding conventions of the server
 - Shared with other parts (repository root): `knowledge/`, `eval/`
@@ -48,7 +48,7 @@ Templates in `.claude/skills/` (`add-llm-provider`, `add-asr-provider`, `swap-mo
 - Pipeline and API code never import concrete providers; new models go through the registry plus a config entry only.
 - Every provider must pass the contract tests (`tests/contract`).
 - Secrets live only in `.env` (template: `.env.example`).
-- Prompts live in `prompts/`, not in code.
+- Prompts live in `prompts/`, not in code. `prompts/event_log_v1.yaml` follows the same safety stance: when unsure, record nothing; keep it in step with the rules above when you change it.
 - Request and response models used by the mobile app are its API: change them deliberately and update the mobile app in the same pull request. Event-log entries follow `docs/project/architecture.md`.
 - A model change means a new config in `configs/experiments/` plus an entry in the evaluation results table (`eval/results/` at the repository root).
 - Coding conventions: [docs/conventions.md](docs/conventions.md).

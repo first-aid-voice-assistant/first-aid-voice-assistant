@@ -4,7 +4,9 @@
 # rescue breaths only for trained rescuers). AED steps are left out for now. Wording is Polish and meant to be read aloud
 # (numbers in words); ids, structure and comments are English.
 #
-# `instructions` are given one at a time. A step without `transitions` ends the scenario.
+# `instructions` are given one at a time, one per turn of the conversation, so an item is one thought
+# the rescuer can act on, in at most two short sentences. Gestures that belong together are one item.
+# A step without `transitions` ends the scenario.
 id: adult-bls
 title: Resuscytacja krążeniowo-oddechowa osoby dorosłej (RKO)
 trigger: >-
@@ -68,8 +70,7 @@ steps:
       Needs medical review.
     instructions:
       - Jeśli ktoś jest z Tobą, poproś, żeby zadzwonił pod sto dwanaście. Jeśli jesteś sam, zadzwoń sam.
-      - Włącz w telefonie tryb głośnomówiący, żeby móc zacząć RKO w trakcie rozmowy z dyspozytorem.
-      - Jeśli to możliwe, zostań z poszkodowanym.
+      - Włącz w telefonie tryb głośnomówiący, żeby móc zacząć RKO w trakcie rozmowy z dyspozytorem. Jeśli to możliwe, zostań z poszkodowanym.
     transitions:
       - when: >-
           wezwano pomoc (ktoś dzwoni, rozmówca rozmawia z dyspozytorem albo czeka, aż dyspozytor
@@ -117,12 +118,9 @@ steps:
   - id: chest_compressions
     actions: [CHEST_COMPRESSIONS]
     instructions:
-      - Uklęknij obok poszkodowanego.
-      - Połóż nasadę jednej dłoni na środku klatki piersiowej, czyli na dolnej połowie mostka.
-      - Drugą dłoń połóż na pierwszej i spleć palce.
-      - Wyprostuj ramiona i ustaw je pionowo nad klatką piersiową poszkodowanego.
-      - Uciskaj mostek na głębokość co najmniej pięciu, ale nie więcej niż sześciu centymetrów, w tempie od stu do stu dwudziestu uciśnięć na minutę.
-      - Po każdym uciśnięciu zwolnij nacisk, nie odrywając dłoni od klatki piersiowej.
+      - Uklęknij obok poszkodowanego. Połóż nasadę jednej dłoni na środku klatki piersiowej, czyli na dolnej połowie mostka.
+      - Drugą dłoń połóż na pierwszej i spleć palce. Wyprostuj ramiona i ustaw je pionowo nad klatką piersiową poszkodowanego.
+      - Uciskaj mostek na głębokość co najmniej pięciu, ale nie więcej niż sześciu centymetrów, w tempie od stu do stu dwudziestu uciśnięć na minutę. Po każdym uciśnięciu zwolnij nacisk, nie odrywając dłoni od klatki piersiowej.
     asks: Czy umiesz wykonywać oddechy ratownicze?
     transitions:
       - when: nie jest przeszkolony albo nie potrafi wykonać oddechów ratowniczych
@@ -161,10 +159,8 @@ steps:
   - id: rescue_breaths
     actions: [OPEN_AIRWAY, RESCUE_BREATHS]
     instructions:
-      - Ponownie udrożnij drogi oddechowe, odginając głowę do tyłu i unosząc brodę.
-      - Palcem wskazującym i kciukiem ręki, która jest na czole, zaciśnij skrzydełka nosa poszkodowanego.
-      - Pozwól, żeby usta poszkodowanego się otworzyły, ale trzymaj brodę uniesioną.
-      - Weź normalny wdech i szczelnie obejmij swoimi ustami usta poszkodowanego.
+      - Ponownie udrożnij drogi oddechowe, odginając głowę do tyłu i unosząc brodę. Palcem wskazującym i kciukiem ręki, która jest na czole, zaciśnij skrzydełka nosa poszkodowanego.
+      - Pozwól, żeby usta poszkodowanego się otworzyły, ale trzymaj brodę uniesioną. Weź normalny wdech i szczelnie obejmij swoimi ustami usta poszkodowanego.
       - Wdmuchuj powietrze jednostajnie, przez około jedną sekundę, obserwując, czy klatka piersiowa się unosi. Wdmuchnij tylko tyle powietrza, żeby klatka zaczęła się unosić.
       - Odsuń usta i obserwuj, jak klatka piersiowa opada. Weź kolejny normalny wdech i wykonaj drugi oddech ratowniczy.
       - Nie przerywaj uciśnięć dłużej niż dziesięć sekund na dwa oddechy, nawet jeśli któryś z nich byłby nieskuteczny. Bez opóźnienia wróć dłońmi na mostek i wykonaj kolejne trzydzieści uciśnięć. Kontynuuj w stosunku trzydzieści uciśnięć do dwóch oddechów.

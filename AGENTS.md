@@ -43,3 +43,5 @@ Overview, requirements and architecture: `docs/project/`.
 Project-wide skills live in `.claude/skills/`; skills of a single part live in that part's `.claude/skills/` (e.g. `poc/server/.claude/skills/`).
 
 - `pr-description` – writes a pull request title and a short bullet list of changes for a branch, in the team's style.
+
+Project command (`.claude/commands/dev.md`, backed by `scripts/dev.ps1`): `/dev <llm|server|mobile|all|status|stop> [options]` starts and stops the LLM container (GPU offload), the PoC server and the Flutter app. Start the LLM container only this way: a plain `docker compose up` recreates it without the GPU.
