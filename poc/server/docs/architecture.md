@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Created** | 2026-10-26 |
-| **Version** | 0.3 |
+| **Version** | 0.4 |
 
 ## Purpose
 
@@ -22,12 +22,14 @@ request ──▶ │ api/  ──▶ pipeline/prompt.py ──▶ providers/reg
 | Module | Responsibility |
 |---|---|
 | `app/main.py` | App factory (`create_app`): loads settings and the YAML config, builds the LLM provider, reads the system prompt, mounts the routers. |
-| `app/core/config.py` | `Settings` (environment variables / `.env`) and `AppConfig` (YAML: ASR, LLM, RAG, prompts). |
+| `app/core/config.py` | `Settings` (environment variables / `.env`) and `AppConfig` (YAML: ASR, LLM, RAG, knowledge, event log, prompts). |
 | `app/api/rest.py` | Public endpoints: `GET /health`, `GET /v1/providers`. |
 | `app/api/ws.py` | `WS /v1/chat`: the mobile app's chat – streams the answer, cancels it on request (see below). |
 | `app/api/dev.py` | Dev-only `GET /dev` (test page) and `POST /dev/chat`, mounted only when `DEV_MODE=true`. |
 | `app/pipeline/prompt.py` | Builds the message list: system prompt + history + user text. |
+| `app/pipeline/completion.py` | `complete()`: a short side call to the model that returns the whole answer at once (temperature 0); used for routing and for the event log. |
 | `app/knowledge/` | Loads and validates `knowledge/` (`loader.py`, `models.py`), reads the wording of the guided conversation (`prompts.py`) and walks through a scenario one instruction at a time (`dialogue.py`). |
+| `app/eventlog/` | The event log: `models.py` (`EventLogEntry`, the shared entry format), `detector.py` (which actions the user reported in an utterance), `recorder.py` (entries with `id`, `elapsed_s`, repeats skipped), `runtime.py` (what `main.py` builds), `prompts.py` (wording from `prompts/event_log_v1.yaml`). |
 | `app/providers/base.py` | Provider interfaces and data types (`Message`, `LLMOptions`, `LLMDelta`, `LLMDone`, `LLMProvider`). |
 | `app/providers/registry.py` | Maps the provider name from the config to a class (`@register_llm("<name>")`, `build_llm`). |
 | `app/providers/llm/` | LLM adapters: `litellm` (Ollama, vLLM, commercial APIs) and `fake` (tests, no model; `delay` imitates a slow model). |
@@ -41,12 +43,13 @@ Used by the mobile app. Messages are JSON objects with a `type`.
 
 | Direction | `type` | Fields | Meaning |
 |---|---|---|---|
-| app → server | `ask` | `id`, `text` (1–2000 chars), `history` (`[{role: user/assistant, content}]`, up to 50) | New question; cancels the answer in progress |
+| app → server | `ask` | `id`, `text` (1–2000 chars), `history` (`[{role: user/assistant, content}]`, up to 50), optional `spoken_at` (ISO 8601 with a time zone: when the user finished speaking) | New question; cancels the answer in progress |
 | app → server | `cancel` | `id` | Stop that answer (e.g. the user interrupted it) |
 | server → app | `delta` | `id`, `text` | Next piece of the answer |
 | server → app | `done` | `id`, `text`, `first_token_ms`, `total_ms` | Full answer and timings |
 | server → app | `cancelled` | `id` | The answer was stopped |
 | server → app | `error` | `id` (or `null` for an invalid message), `message` | The model failed or the message was invalid; the connection stays open |
+| server → app | `action_logged` | `id` (of the question), `entry` (see "Event log entry" in `docs/project/architecture.md`) | A rescue action was recognised in the user's words; sent only when `event_log.enabled`, independently of the answer (it may come after `done`) |
 
 1. `api/ws.py` reads messages in a loop; each `ask` starts a task that streams the answer, so the loop keeps reading and can cancel it.
 2. `pipeline/prompt.py` builds `[system prompt, *history, question]`. The history comes from the app with every question; the only state the server keeps is the position in the scenario (see Guided scenarios), for as long as the connection lives.
@@ -64,6 +67,18 @@ The scenarios of `knowledge/` (state machines in YAML; steps may cite their sour
 
 Limits: the state lives only as long as the WebSocket connection (a reconnect restarts the scenario); the assistant assumes the user did what it asked when they speak again; each choice of a transition costs one extra model call before the answer starts. `POST /dev/chat` is stateless, so each request starts a scenario from its beginning.
 
+## Event log
+
+Records the rescue actions the user reports, in order and with timestamps, instead of the raw conversation. The server only recognises the actions and sends them; the phone keeps the log. The decision and its consequences: [ADR 0002](../../../docs/adr/0002-event-log-detection.md).
+
+1. At start-up `main.py` builds an `EventLogRuntime` (the action dictionary of `knowledge/` plus `prompts/event_log_v1.yaml`) when `event_log.enabled`. It needs `knowledge.enabled`, otherwise the server does not start. Every WebSocket connection gets its own `EventLogRecorder`.
+2. For every `ask`, `ws.py` starts a separate task next to the answer. It does not wait for the answer and is not stopped when the answer is cancelled (what the user did is true even if they interrupt the assistant); it ends with the connection.
+3. `ActionDetector` makes one short side call (`pipeline/completion.py`): the user's words, the assistant's last message and the numbered action dictionary go in, numbers come out. Anything that is not a clean list of valid numbers means "no action".
+4. `EventLogRecorder` turns the codes into `EventLogEntry`: `timestamp` is `spoken_at` (the time the server received the question if the app sent none), `elapsed_s` counts from the first entry, `transcript` is the user's words. An action repeated right after itself is logged once. Detections run one at a time in the order of the questions.
+5. Each entry goes to the app as an `action_logged` event. A failure of the call is only logged on the server: it does not stop the answer and does not send `error` (that triggers the client's "call 112" fallback).
+
+Limits: only actions from the dictionary are recognised; the extra call per utterance may slow the answer down on a single local model; the recorder's state (last action) is lost on reconnect, so a continuing action may be logged again. A client that does not know `action_logged` must run with `event_log.enabled: false` (the default in the shipped configs).
+
 ## Request flow (`POST /dev/chat`)
 
 1. `api/dev.py` validates the body (`{"text": "..."}`, 1–2000 characters).
@@ -75,6 +90,7 @@ Limits: the state lives only as long as the WebSocket connection (a reconnect re
 
 - `configs/*.yaml` select the providers and their parameters (`APP_CONFIG` picks the file): `base.yaml` (Docker), `gemma.yaml` (app on the host, Gemma 3 1B in the Ollama container), `bielik.yaml` (app on the host, Bielik 4.5B v3 in the Ollama container), `fake.yaml` (no model, streams a fixed Polish answer word by word with a delay – for UI work and trying the app; tests swap in an echoing fake).
 - `knowledge: {enabled, path}` and `prompts.knowledge` turn on the scenarios from `knowledge/`; in Docker the folder is mounted read-only at `/knowledge`, which is where `../../knowledge` points from `/app`.
+- `event_log: {enabled}` and `prompts.event_log` turn on the event log (needs `knowledge`). It is off in the shipped configs until the mobile app handles `action_logged`.
 - `.env` holds secrets and environment settings (`DEV_MODE`, API keys, `REDIS_URL`).
 - Experiments with other models go to `configs/experiments/`.
 
@@ -94,7 +110,7 @@ Limits: the state lives only as long as the WebSocket connection (a reconnect re
 ## Not implemented yet
 
 - ASR / audio input (in the demo, speech recognition is planned on the phone).
-- Sessions that outlive a WebSocket connection (the scenario position is kept only per connection), the event log.
+- Sessions that outlive a WebSocket connection (the scenario position and the event log recorder state are kept only per connection).
 - Authentication of the WebSocket (PoC in a local network only).
 - The analysis endpoint for the mobile app (recognised actions and the next step).
 - RAG over the knowledge base.
@@ -106,3 +122,4 @@ Limits: the state lives only as long as the WebSocket connection (a reconnect re
 | 0.1 | 2026-10-26 | First version, based on the existing code |
 | 0.2 | 2026-10-29 | `WS /v1/chat` with streamed answers, cancelling and history sent by the app; `gemma.yaml`, `bielik.yaml`; `fake.yaml` streams a fixed answer slowly |
 | 0.3 | 2026-10-29 | Guided scenarios: `app/knowledge/` (loader, validation, `ScenarioDialogue` that gives the model one instruction per turn), `prompts/scenario_v1.yaml`, `knowledge` config section; the server keeps the scenario position per WebSocket connection |
+| 0.4 | 2026-11-08 | Event log: `app/eventlog/` (detector, recorder), `spoken_at` in `ask`, `action_logged` event, `event_log` config section, `prompts/event_log_v1.yaml`, `pipeline/completion.py` |

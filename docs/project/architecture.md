@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Created** | 2026-10-26 |
-| **Version** | 0.4 |
+| **Version** | 0.5 |
 
 ## Overview
 
@@ -33,6 +33,8 @@
 ## Key decisions
 
 - **The action state lives on the phone.** The app sends the event history and the current scenario step with every request, so the server keeps no sessions. This also makes it easier to move the LLM onto the phone later.
+- **The server recognises actions, the phone keeps the event log.** For every recognised action the server sends an `action_logged` event with an entry in the format below; the app stores it. See [ADR 0002](../adr/0002-event-log-detection.md).
+- **Most server logic is meant to move to Dart later**, so that the fully offline version and the online one share one implementation. The PoC server is the reference implementation; what stays shared is the entry format, `knowledge/` and the prompt files ([ADR 0002](../adr/0002-event-log-detection.md)).
 - **Timestamps are taken at the end of the utterance**, not when the answer arrives, so server latency does not distort the event log.
 - **Answers are streamed and spoken while they are generated.** The user and the assistant take turns: the microphone stops by itself after a short pause and stays off while the assistant answers; "Przerwij" stops the answer, and the next question carries only the part that was actually spoken.
 - **Models are swappable by configuration** (provider registry on the server), so that local and cloud models can be compared on the same corpus.
@@ -74,3 +76,4 @@ In the current PoC the LLM runs on the server, so the offline mode is a later st
 | 0.2 | 2026-10-29 | ASR: three on-device engines compared in the PoC app instead of Whisper only |
 | 0.3 | 2026-10-29 | WebSocket API with streamed answers; TTS on the phone (system voice, Piper); user and assistant take turns |
 | 0.4 | 2026-11-08 | Event log entry: `elapsed_s` counts from the first entry; `confidence` and `source` are optional |
+| 0.5 | 2026-11-08 | Key decisions: the server recognises actions and sends them as `action_logged`, the phone keeps the log; server logic is to move to Dart later (ADR 0002) |

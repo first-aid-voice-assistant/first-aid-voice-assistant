@@ -13,6 +13,7 @@ All commands below are run from `poc/server/`.
 - Commercial models behind the same provider interfaces (LiteLLM adapter).
 - API: `GET /health`, `GET /v1/providers`, `WS /v1/chat` (the mobile app's chat: the answer is streamed and can be cancelled; the app sends the conversation history with every question) and the dev-only `POST /dev/chat` for testing the LLM with ready-made transcripts.
 - No audio/ASR on the server: speech is recognised on the phone.
+- Event log (`event_log.enabled`, off in the shipped configs): the server recognises which rescue actions the user reports and sends each as an `action_logged` event with a timestamp (`spoken_at` from the app); the phone keeps the log ([ADR 0002](../../docs/adr/0002-event-log-detection.md)).
 - The first-aid scenarios from `knowledge/` (adult BLS, choking) guide the conversation (`knowledge.enabled`): the server keeps the position in the scenario per WebSocket connection and gives the model one instruction per turn. RAG is disabled (`rag.enabled: false`), Qdrant sits behind the `rag` profile.
 
 More: [docs/architecture.md](docs/architecture.md). Coding conventions: [docs/conventions.md](docs/conventions.md).
@@ -25,7 +26,8 @@ poc/server/
 │   ├── main.py               # app factory, wiring
 │   ├── api/                  # REST endpoints, chat WebSocket (ws.py), dev-only test endpoint and page (static/)
 │   ├── core/                 # config loading (env + YAML)
-│   ├── pipeline/             # prompt building
+│   ├── pipeline/             # prompt building, short side calls to the model (completion.py)
+│   ├── eventlog/             # event log: entry model, action detector, recorder
 │   ├── knowledge/            # loads and validates knowledge/ (scenarios), steps through them (dialogue.py)
 │   ├── providers/            # model adapters
 │   │   ├── base.py           # provider interfaces
@@ -36,7 +38,7 @@ poc/server/
 │   └── tools/                # helper commands (e.g. pulling the Ollama model)
 ├── configs/                  # base.yaml, fake.yaml, gemma.yaml, bielik.yaml, experiments/ (one config per model),
 │                             # modelfiles/ (Ollama Modelfiles), domain_terms.txt
-├── prompts/                  # system prompts (versioned files)
+├── prompts/                  # system prompt, scenario wording, event log prompt (versioned files)
 ├── scripts/                  # chat_client.py (one-shot test client), chat_repl.py (interactive chat over WS /v1/chat)
 ├── tests/                    # unit/ and contract/ (same tests for every provider)
 ├── docs/                     # architecture and coding conventions of the server
@@ -83,9 +85,11 @@ Running the app locally against the Ollama container: `$env:APP_CONFIG = "config
 `POST /dev/chat` (the `/dev` page and `chat_client.py`) is stateless: every request starts the scenario from the beginning. To have a real multi-turn conversation, use the interactive client, which talks to `WS /v1/chat` like the mobile app (keeps the history, prints the answer as it streams in):
 
 ```bash
-uv run python scripts/chat_repl.py                        # type your lines; /reset starts over, /quit exits
+uv run python scripts/chat_repl.py                        # type your lines; /log shows the event log, /reset starts over, /quit exits
 uv run python scripts/chat_repl.py --script rozmowa.txt   # replay a conversation, one utterance per line
 ```
+
+With `event_log.enabled: true` in the config (copy a config and switch it on; it is off by default because the mobile app does not handle the event yet) the client sends `spoken_at` with every line, prints each recognised action under the answer and shows the whole event log at the end (`--log-wait` sets how many seconds of silence to wait for late entries). Recognition quality depends on the model, so check it with the model you use, e.g. a line like `Sprawdzam oddech, nie oddycha` should give `CHECK_BREATHING`.
 
 ### GPU
 
