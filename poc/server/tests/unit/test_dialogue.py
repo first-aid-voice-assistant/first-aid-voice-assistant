@@ -77,7 +77,7 @@ async def test_no_matching_scenario_gives_no_instructions_and_asks_again_next_tu
 
 
 async def test_instructions_inside_a_step_come_one_per_turn_without_calling_the_model() -> None:
-    # call_emergency has three instructions. Safety and response check are one each.
+    # call_emergency has two instructions. Safety and response check are one each.
     dialogue, llm = make([BLS, "1", "1"])
     await turn(dialogue, "Nie rusza się")  # safety
     await turn(dialogue, "Jest bezpiecznie")  # check_response
@@ -85,11 +85,10 @@ async def test_instructions_inside_a_step_come_one_per_turn_without_calling_the_
     calls_so_far = len(llm.calls)
 
     second = await turn(dialogue)
-    third = await turn(dialogue)
 
     assert "poproś, żeby zadzwonił pod sto dwanaście" in first
     assert "tryb głośnomówiący" in second
-    assert "zostań z poszkodowanym" in third
+    assert "zostań z poszkodowanym" in second  # the last two gestures are one instruction
     assert len(llm.calls) == calls_so_far
 
 
