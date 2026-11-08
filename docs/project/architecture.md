@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Created** | 2026-10-26 |
-| **Version** | 0.3 |
+| **Version** | 0.4 |
 
 ## Overview
 
@@ -47,11 +47,11 @@ The same format is used by the mobile app (event log), the server (recognised ac
 |---|---|---|
 | `id` | string | Unique identifier of the entry |
 | `timestamp` | string (ISO 8601 with time zone) | End of the utterance in which the action was reported |
-| `elapsed_s` | number | Seconds since the start of the action |
+| `elapsed_s` | number | Seconds since the first entry of the log (the start of the rescue) |
 | `action` | string | Action code from the action dictionary in `knowledge/scenarios/` |
-| `transcript` | string | Recognised text of the utterance |
-| `confidence` | number (0–1) | Confidence of the recognition |
-| `source` | `local` / `cloud` | Which model produced the result |
+| `transcript` | string | Recognised text of the utterance; also carries details the code does not (e.g. "10 breaths") |
+| `confidence` | number (0–1), optional | Confidence of the recognition; absent when the model reports none (LLM-based detection does not) |
+| `source` | `local` / `cloud`, optional | Which model produced the result |
 
 ## Online and offline
 
@@ -73,3 +73,4 @@ In the current PoC the LLM runs on the server, so the offline mode is a later st
 | 0.1 | 2026-10-26 | First version, based on the system concept document and the PoC |
 | 0.2 | 2026-10-29 | ASR: three on-device engines compared in the PoC app instead of Whisper only |
 | 0.3 | 2026-10-29 | WebSocket API with streamed answers; TTS on the phone (system voice, Piper); user and assistant take turns |
+| 0.4 | 2026-11-08 | Event log entry: `elapsed_s` counts from the first entry; `confidence` and `source` are optional |
