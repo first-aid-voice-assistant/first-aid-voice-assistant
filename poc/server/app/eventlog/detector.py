@@ -26,8 +26,10 @@ def parse_choices(reply: str, options: int) -> list[int]:
     if _NUMBERS.fullmatch(reply) is None:
         return []
     numbers = [int(n) for n in re.findall(r"\d+", reply)]
-    if numbers[0] == 0 or any(n > options for n in numbers):
-        return []  # "0 ..." is "none"; a number outside the list means the reply cannot be trusted
+    if 0 in numbers or any(n > options for n in numbers):
+        # "0" is "none", so "0, 3" or "3, 0" contradicts itself; a number outside the list is
+        # no better. Either way the reply cannot be trusted.
+        return []
     return list(dict.fromkeys(numbers))  # no repeats, order kept
 
 

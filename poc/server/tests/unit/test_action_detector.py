@@ -42,7 +42,8 @@ def make(reply: str) -> tuple[ActionDetector, ScriptedLLM]:
         ("2, 5", [2, 5]),
         ("5, 5, 2", [5, 2]),  # repeats dropped
         ("0", []),
-        ("0, 3", []),  # "none" first: the reply contradicts itself
+        ("0, 3", []),  # "none" and an action: the reply contradicts itself
+        ("3, 0", []),  # same; 0 must never be used as an index (it would pick the last action)
         ("99", []),  # no such action
         ("Myślę, że 3", []),  # words around the digits: not trusted
         ("", []),
