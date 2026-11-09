@@ -8,8 +8,6 @@ import '../view_models/conversation_view_model.dart';
 import 'conversation_history.dart';
 import 'step_illustration.dart';
 
-const String firstPrompt = 'Naciśnij przycisk i powiedz, co się stało.';
-
 class ConversationScreen extends StatefulWidget {
   const ConversationScreen({
     super.key,
@@ -99,7 +97,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     ),
                     Expanded(
                       flex: 2,
-                      child: _TalkButton(viewModel: _viewModel),
+                      child: _ListeningIndicator(viewModel: _viewModel),
                     ),
                     Expanded(
                       child: _RoundAction(
@@ -144,7 +142,7 @@ class _StepView extends StatelessWidget {
           child: StepIllustration(
             media: viewModel.media,
             shownFor: () => viewModel.mediaShownFor,
-            onBeat: viewModel.onMetronomeBeat,
+            beats: viewModel.beats,
           ),
         ),
         const SizedBox(height: 20),
@@ -154,7 +152,7 @@ class _StepView extends StatelessWidget {
             child: Semantics(
               liveRegion: true,
               child: Text(
-                answer ?? (waiting ? '…' : firstPrompt),
+                answer ?? (waiting ? '…' : greeting),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: answer == null ? 18 : 22,
@@ -171,29 +169,25 @@ class _StepView extends StatelessWidget {
           ),
         ),
         if (userText != null) ...[
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.person_outline_rounded,
-                size: 18,
-                color: AppColors.textSecondary,
-              ),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  userText,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontStyle: FontStyle.italic,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ),
-            ],
+          const SizedBox(height: 12),
+          const Icon(
+            Icons.person_outline_rounded,
+            size: 20,
+            color: AppColors.textSecondary,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            userText,
+            textAlign: TextAlign.center,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 17,
+              height: 1.35,
+              fontWeight: FontWeight.w600,
+              fontStyle: FontStyle.italic,
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ],
@@ -339,24 +333,21 @@ class _StatusLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final message = viewModel.message;
     final activity = viewModel.assistantActivity;
+    final speaking = activity == AssistantActivity.speaking;
     final (text, color) = switch (viewModel.status) {
-      _ when activity == AssistantActivity.speaking => (
-        'Asystent mówi…',
-        AppColors.ok,
-      ),
+      _ when speaking => ('Asystent mówi…', AppColors.ok),
       _ when activity == AssistantActivity.thinking => (
         'Asystent myśli…',
         AppColors.busy,
       ),
-      ConversationStatus.recording => (
-        'Słucham… gdy skończysz, mikrofon sam się wyłączy',
-        AppColors.primary,
-      ),
-      ConversationStatus.transcribing => (
-        'Kończę rozpoznawanie…',
-        AppColors.busy,
-      ),
       _ when message != null => (message, AppColors.textSecondary),
+      ConversationStatus.starting => ('Włączam mikrofon…', AppColors.busy),
+      ConversationStatus.paused
+          when viewModel.pauseReason == PauseReason.microphoneUnavailable =>
+        (
+          'Naciśnij mikrofon, aby asystent znów słuchał',
+          AppColors.textSecondary,
+        ),
       _ => ('', AppColors.textSecondary),
     };
     return SizedBox(
@@ -389,65 +380,77 @@ class _StatusLine extends StatelessWidget {
   }
 }
 
-class _TalkButton extends StatelessWidget {
-  const _TalkButton({required this.viewModel});
+class _ListeningIndicator extends StatelessWidget {
+  const _ListeningIndicator({required this.viewModel});
 
   final ConversationViewModel viewModel;
 
   @override
   Widget build(BuildContext context) {
-    final recording = viewModel.isRecording;
-    final enabled = viewModel.canRecord || recording;
-    return Column(
-      children: [
-        Semantics(
-          button: true,
-          enabled: enabled,
-          label: recording ? 'Zakończ mówienie' : 'Zacznij mówić',
-          child: GestureDetector(
-            onTap: enabled ? viewModel.toggleRecording : null,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              width: recording ? 108 : 96,
-              height: recording ? 108 : 96,
+    final listening = viewModel.isListening;
+    final heard = listening && viewModel.partialText.isNotEmpty;
+    final assistantSpeaking =
+        viewModel.pauseReason == PauseReason.assistantSpeaking;
+    final caption = switch (viewModel.status) {
+      ConversationStatus.listening when heard => 'Słyszę Cię…',
+      ConversationStatus.listening => 'Słucham',
+      ConversationStatus.paused when assistantSpeaking => 'Mówi asystent',
+      ConversationStatus.paused => 'Włącz mikrofon',
+      ConversationStatus.failed => 'Niedostępne',
+      _ => 'Przygotowuję…',
+    };
+    final resume = viewModel.canResume ? viewModel.resume : null;
+    return Semantics(
+      liveRegion: true,
+      button: resume != null,
+      label: caption,
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: resume,
+        child: Column(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: heard ? 104 : 92,
+              height: heard ? 104 : 92,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: enabled ? AppColors.primary : const Color(0xFFBDBDC2),
-                boxShadow: enabled
+                color: listening ? AppColors.primary : const Color(0xFFBDBDC2),
+                boxShadow: listening
                     ? [
                         BoxShadow(
                           color: AppColors.primary.withValues(
-                            alpha: recording ? 0.5 : 0.35,
+                            alpha: heard ? 0.55 : 0.3,
                           ),
-                          blurRadius: recording ? 28 : 20,
-                          offset: const Offset(0, 8),
+                          blurRadius: heard ? 30 : 18,
+                          spreadRadius: heard ? 6 : 0,
                         ),
                       ]
                     : null,
               ),
               child: Icon(
-                recording ? Icons.stop_rounded : Icons.mic_none_rounded,
+                listening
+                    ? Icons.graphic_eq_rounded
+                    : assistantSpeaking
+                    ? Icons.volume_up_rounded
+                    : Icons.mic_off_rounded,
                 color: Colors.white,
                 size: 40,
               ),
             ),
-          ),
+            const SizedBox(height: 8),
+            Text(
+              caption,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF444444),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
-        Text(
-          recording
-              ? 'Naciśnij, aby zakończyć'
-              : viewModel.assistantActivity == AssistantActivity.idle
-              ? 'Naciśnij i mów'
-              : 'Poczekaj, aż asystent skończy',
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF444444),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -12,12 +13,12 @@ class StepIllustration extends StatefulWidget {
     super.key,
     required this.media,
     required this.shownFor,
-    this.onBeat,
+    this.beats,
   });
 
   final String? media;
   final Duration Function() shownFor;
-  final VoidCallback? onBeat;
+  final Stream<void>? beats;
 
   @override
   State<StepIllustration> createState() => _StepIllustrationState();
@@ -26,27 +27,31 @@ class StepIllustration extends StatefulWidget {
 class _StepIllustrationState extends State<StepIllustration>
     with SingleTickerProviderStateMixin {
   late final AnimationController _motion = AnimationController(vsync: this);
-  double _lastPhase = 0;
+  StreamSubscription<void>? _beats;
 
   Illustration get _illustration => Illustrations.of(widget.media);
+
+  bool get _followsBeats => _illustration.hasMetronome && widget.beats != null;
 
   @override
   void initState() {
     super.initState();
-    _motion.addListener(_detectBeat);
+    _beats = widget.beats?.listen((_) => _onBeat());
     _restartMotion();
   }
 
-  void _detectBeat() {
-    final phase = _motion.value;
-    final wrapped = phase < _lastPhase;
-    _lastPhase = phase;
-    if (wrapped && _illustration.hasMetronome) widget.onBeat?.call();
+  void _onBeat() {
+    if (!_followsBeats || !mounted) return;
+    _motion.forward(from: 0);
   }
 
   @override
   void didUpdateWidget(StepIllustration oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.beats, widget.beats)) {
+      _beats?.cancel();
+      _beats = widget.beats?.listen((_) => _onBeat());
+    }
     if (!identical(Illustrations.of(oldWidget.media), _illustration)) {
       _restartMotion();
     }
@@ -60,15 +65,19 @@ class _StepIllustrationState extends State<StepIllustration>
         ..value = 0;
       return;
     }
-    _lastPhase = 0;
-    _motion
-      ..duration = period
-      ..repeat();
-    if (_illustration.hasMetronome) widget.onBeat?.call();
+    _motion.duration = period;
+    if (_followsBeats) {
+      _motion
+        ..stop()
+        ..value = 0;
+    } else {
+      _motion.repeat();
+    }
   }
 
   @override
   void dispose() {
+    _beats?.cancel();
     _motion.dispose();
     super.dispose();
   }

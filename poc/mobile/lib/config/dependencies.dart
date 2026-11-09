@@ -9,6 +9,7 @@ import '../data/services/metronome_sound.dart';
 import '../data/services/key_value_store.dart';
 import '../data/services/model_store.dart';
 import '../data/services/parakeet_decoder.dart';
+import '../data/services/screen_wake.dart';
 import '../data/services/speech_segmenter.dart';
 import '../data/services/speech_synthesizer.dart';
 import '../data/services/streaming_recognizer.dart';
@@ -42,6 +43,7 @@ class AppDependencies {
           serverUri: () => settings.chatUri,
         ),
         metronome: AudioPlayersMetronomeSound(),
+        screenWake: const WakelockScreenWake(),
       ),
       createSpeechOutput: (voice) => _speechOutput(voice, modelStore),
       emergencyDialer: const PhoneEmergencyDialer(),
