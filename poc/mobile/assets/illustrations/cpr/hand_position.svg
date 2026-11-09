@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 300">
+  <g transform="translate(60 0)">
+  <path d="M120 300 L120 120 Q120 40 200 34 L320 34 Q400 40 400 120 L400 300 Z" fill="#6C8EBF" stroke="#2A3441" stroke-width="1.8"/>
+  <path d="M230 34 Q260 62 290 34 Z" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8"/>
+  <path d="M260 70 L260 236" fill="none" stroke="#4E6E9E" stroke-width="5" stroke-linecap="round"/>
+  <path d="M260 160 L260 236" fill="none" stroke="#C0392B" stroke-width="5" stroke-linecap="round"/>
+  <g fill="none" stroke="#5A7AAA" stroke-width="2.5" stroke-linecap="round">
+    <path d="M250 96 Q200 100 170 130"/><path d="M270 96 Q320 100 350 130"/>
+    <path d="M250 126 Q204 132 176 160"/><path d="M270 126 Q316 132 344 160"/>
+  </g>
+  <path d="M196 300 L232 214" fill="none" stroke="#E3C3A6" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M324 300 L288 214" fill="none" stroke="#E3C3A6" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <ellipse cx="260" cy="200" rx="44" ry="24" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8"/>
+  <ellipse cx="260" cy="192" rx="36" ry="18" fill="#EACFB5" stroke="#2A3441" stroke-width="1.8"/>
+  <g fill="none" stroke="#B88E6C" stroke-width="2.5" stroke-linecap="round">
+    <path d="M238 178 L238 206"/><path d="M252 174 L252 210"/><path d="M268 174 L268 210"/><path d="M282 178 L282 206"/>
+  </g>
+  </g>
+  <text x="16" y="28" text-anchor="start" font-family="sans-serif" font-size="18" font-weight="bold" fill="#2A3441">Środek klatki</text>
+  <text x="16" y="50" text-anchor="start" font-family="sans-serif" font-size="16" font-weight="bold" fill="#8A94A6">dolna połowa</text>
+  <text x="16" y="68" text-anchor="start" font-family="sans-serif" font-size="16" font-weight="bold" fill="#8A94A6">mostka</text>
+  <text x="16" y="110" text-anchor="start" font-family="sans-serif" font-size="18" font-weight="bold" fill="#2A3441">Spleć palce</text>
+</svg>

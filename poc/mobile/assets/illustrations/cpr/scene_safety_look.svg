@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 300">
+  <g fill="#C0392B">
+    <circle cx="150" cy="76" r="3.5"/>
+    <circle cx="176" cy="75.5" r="3.5"/>
+    <circle cx="202" cy="75" r="3.5"/>
+    <circle cx="228" cy="74.5" r="3.5"/>
+    <circle cx="254" cy="74" r="3.5"/>
+    <circle cx="280" cy="73.5" r="3.5"/>
+    <circle cx="306" cy="73" r="3.5"/>
+    <circle cx="332" cy="72.5" r="3.5"/>
+    <circle cx="358" cy="72" r="3.5"/>
+    <circle cx="150" cy="92" r="3.5"/>
+    <circle cx="174" cy="108" r="3.5"/>
+    <circle cx="198" cy="124" r="3.5"/>
+    <circle cx="222" cy="140" r="3.5"/>
+    <circle cx="246" cy="156" r="3.5"/>
+    <circle cx="270" cy="172" r="3.5"/>
+  </g>
+</svg>
