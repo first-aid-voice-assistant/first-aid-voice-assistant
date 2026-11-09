@@ -56,6 +56,12 @@ class ScenarioDialogue:
         self._moved = False  # the cursor entered a step during this turn
         self._repeats = 0  # consecutive turns in which the last instruction was repeated
         self._interjected = False  # the previous turn answered a problem instead of moving on
+        self._media: str | None = None
+
+    @property
+    def media(self) -> str | None:
+        """Picture of the current turn's instruction (set by `begin_turn`); None without one."""
+        return self._media
 
     async def begin_turn(self, user_text: str, history: list[Message]) -> str:
         """Moves the cursor if the user's words call for it; returns the task for the model."""
@@ -80,18 +86,21 @@ class ScenarioDialogue:
             interject = not self._moved and intent in (_OBSTACLE, _OTHER) and not was_interjected
 
         if self._step is None:
+            self._media = None
             titles = ", ".join(s.title for s in self._scenarios.values())
             return self._prompts.idle.format(titles=titles).strip()
-        units = self._step.units
+        units, media = self._step.units, self._step.unit_media
         if interject:
+            last = min(self._unit, len(units)) - 1
+            self._media = media[last]
             self._interjected = True
-            return self._prompts.interject.format(
-                last=units[min(self._unit, len(units)) - 1]
-            ).strip()
+            return self._prompts.interject.format(last=units[last]).strip()
         if self._unit < len(units):
+            self._media = media[self._unit]
             self._repeats = 0
             self._advance_on_completion = True
             return self._prompts.say.format(instruction=units[self._unit]).strip()
+        self._media = media[-1]
         if not self._step.transitions:
             return self._prompts.finished.strip()
         self._repeats += 1

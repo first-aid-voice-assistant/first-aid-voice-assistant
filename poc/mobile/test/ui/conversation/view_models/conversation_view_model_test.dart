@@ -11,6 +11,7 @@ void main() {
   late FakeSpeechOutput output;
   late FakeChatSocket socket;
   late ConversationViewModel viewModel;
+  late FakeMetronomeSound metronome;
   var now = DateTime(2026, 10, 27, 14, 21, 3);
 
   ConversationViewModel build({
@@ -22,6 +23,7 @@ void main() {
       socket: socket,
       serverUri: () => Uri.parse('ws://server:8000/v1/chat'),
     ),
+    metronome: metronome,
     endOfTurn: endOfTurn,
     clock: () => now,
   );
@@ -30,6 +32,7 @@ void main() {
     now = DateTime(2026, 10, 27, 14, 21, 3);
     input = FakeSpeechInput();
     output = FakeSpeechOutput();
+    metronome = FakeMetronomeSound();
     socket = FakeChatSocket();
     viewModel = build();
   });
@@ -338,6 +341,80 @@ void main() {
     expect(viewModel.message, contains('112'));
   });
 
+  test(
+    'shows the picture of the step and how long it has been shown',
+    () async {
+      final connection = await askFirstQuestion();
+      expect(viewModel.media, isNull);
+      expect(viewModel.latestUserText, 'Kolega nie oddycha');
+
+      connection
+        ..step('cpr/compressions')
+        ..delta('Uciskaj mocno.');
+      await settle();
+      now = now.add(const Duration(seconds: 40));
+
+      expect(viewModel.media, 'cpr/compressions');
+      expect(viewModel.mediaShownFor, const Duration(seconds: 40));
+      expect(viewModel.latestAnswer, 'Uciskaj mocno.');
+    },
+  );
+
+  test('the same picture in the next turn keeps its time', () async {
+    final connection = await askFirstQuestion();
+    connection
+      ..step('cpr/compressions')
+      ..done('Uciskaj mocno.');
+    await settle();
+    now = now.add(const Duration(seconds: 30));
+
+    await viewModel.toggleRecording();
+    await viewModel.toggleRecording();
+    await settle();
+    connection.step('cpr/compressions');
+    await settle();
+
+    expect(viewModel.mediaShownFor, const Duration(seconds: 30));
+  });
+
+  test(
+    'the metronome sounds only for compressions while nobody speaks',
+    () async {
+      output.holdSentences = true;
+      final connection = await askFirstQuestion();
+      connection
+        ..step('cpr/compressions')
+        ..delta('Uciskaj mocno. ')
+        ..done('Uciskaj mocno. ');
+      await settle();
+
+      viewModel.onMetronomeBeat();
+      expect(metronome.clicks, 0, reason: 'the assistant is speaking');
+
+      output.finishSentence();
+      await settle();
+      viewModel.onMetronomeBeat();
+      expect(metronome.clicks, 1);
+
+      await viewModel.toggleRecording();
+      viewModel.onMetronomeBeat();
+      expect(metronome.clicks, 1, reason: 'the user is speaking');
+    },
+  );
+
+  test('the metronome is silent outside compressions', () async {
+    final connection = await askFirstQuestion();
+    connection
+      ..step('cpr/head-tilt')
+      ..done('Odegnij głowę.');
+    await settle();
+
+    viewModel.onMetronomeBeat();
+
+    expect(viewModel.metronomeAudible, isFalse);
+    expect(metronome.clicks, 0);
+  });
+
   test('dispose releases the voice and the connection', () async {
     await askFirstQuestion();
 
@@ -345,6 +422,7 @@ void main() {
     await settle();
 
     expect(output.disposed, isTrue);
+    expect(metronome.disposed, isTrue);
     expect(socket.connection!.closed, isTrue);
   });
 }

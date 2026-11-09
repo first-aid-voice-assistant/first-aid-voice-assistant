@@ -83,6 +83,7 @@ def _check_references(kb: KnowledgeBase) -> None:
                     }:
                         problems.append(f"{where}: hand-off to unknown '{tr.handoff}'")
         problems.extend(_unreachable(sc))
+        problems.extend(_missing_media(sc))
 
     if problems:
         raise KnowledgeError("invalid knowledge base:\n- " + "\n- ".join(problems))
@@ -96,6 +97,17 @@ def _section_known(ref: str, known: set[str]) -> bool:
 def _duplicates(problems: list[str], what: str, ids: list[str]) -> None:
     for i in sorted({i for i in ids if ids.count(i) > 1}):
         problems.append(f"duplicate {what} id '{i}'")
+
+
+def _missing_media(sc: Scenario) -> list[str]:
+    if not any(m for step in sc.steps for m in step.unit_media):
+        return []
+    return [
+        f"{sc.id}/{step.id}: instruction {i + 1} has no media"
+        for step in sc.steps
+        for i, media in enumerate(step.unit_media[: len(step.instructions)])
+        if media is None
+    ]
 
 
 def _unreachable(sc: Scenario) -> list[str]:

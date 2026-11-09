@@ -4,6 +4,8 @@ import '../data/repositories/speech_input.dart';
 import '../data/repositories/speech_output.dart';
 import '../data/services/audio_output.dart';
 import '../data/services/chat_socket.dart';
+import '../data/services/emergency_dialer.dart';
+import '../data/services/metronome_sound.dart';
 import '../data/services/key_value_store.dart';
 import '../data/services/model_store.dart';
 import '../data/services/parakeet_decoder.dart';
@@ -23,6 +25,7 @@ class AppDependencies {
     required this.modelStore,
     required this.createConversationViewModel,
     required this.createSpeechOutput,
+    required this.emergencyDialer,
   });
 
   static Future<AppDependencies> production() async {
@@ -38,8 +41,10 @@ class AppDependencies {
           socket: WebSocketChatSocket(),
           serverUri: () => settings.chatUri,
         ),
+        metronome: AudioPlayersMetronomeSound(),
       ),
       createSpeechOutput: (voice) => _speechOutput(voice, modelStore),
+      emergencyDialer: const PhoneEmergencyDialer(),
     );
   }
 
@@ -88,4 +93,6 @@ class AppDependencies {
   final ConversationViewModel Function() createConversationViewModel;
 
   final SpeechOutput Function(VoiceEngine voice) createSpeechOutput;
+
+  final EmergencyDialer emergencyDialer;
 }

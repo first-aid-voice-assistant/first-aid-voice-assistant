@@ -5,11 +5,12 @@ between files (sources, actions, steps) are checked by `loader.load_knowledge`.
 """
 
 from datetime import date
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 Level = Literal["layperson", "paramedic"]
+MediaKey = Annotated[str, Field(pattern=r"^[a-z0-9-]+/[a-z0-9-]+$")]
 
 
 class Source(BaseModel):
@@ -60,19 +61,38 @@ class Transition(BaseModel):
         return self
 
 
+class Instruction(BaseModel):
+    text: str
+    media: MediaKey | None = None
+
+
 class Step(BaseModel):
     id: str
-    instructions: list[str] = Field(min_length=1)  # given one at a time
+    instructions: list[Instruction] = Field(min_length=1)  # given one at a time
     asks: str | None = None
+    media: MediaKey | None = None
     actions: list[str] = Field(default_factory=list)  # codes the rescuer may perform here
     transitions: list[Transition] = Field(default_factory=list)  # none = end of the scenario
     sources: list[SourceRef] = Field(default_factory=list)  # checked against sources/ if present
     note: str | None = None  # where the step goes beyond the guideline; for reviewers
 
+    @field_validator("instructions", mode="before")
+    @classmethod
+    def _plain_strings_are_instructions(cls, value: object) -> object:
+        if isinstance(value, list):
+            return [{"text": item} if isinstance(item, str) else item for item in value]
+        return value
+
     @property
     def units(self) -> list[str]:
         """What the assistant says in this step, one item per turn: instructions, then the ask."""
-        return [*self.instructions, *([self.asks] if self.asks else [])]
+        return [*(i.text for i in self.instructions), *([self.asks] if self.asks else [])]
+
+    @property
+    def unit_media(self) -> list[str | None]:
+        """The picture of every unit (see `units`)."""
+        pictures = [i.media or self.media for i in self.instructions]
+        return [*pictures, *([pictures[-1]] if self.asks else [])]
 
 
 class Scenario(BaseModel):

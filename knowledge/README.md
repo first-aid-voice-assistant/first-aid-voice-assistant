@@ -25,14 +25,15 @@ Vetted first-aid and emergency-medicine knowledge that the assistant relies on. 
 
 A scenario has `id`, `title`, `trigger` (when to choose it), `level`, `start` and a list of `steps`. A step has:
 
-- `instructions` – what to say, one at a time (Polish, numbers in words because the answer is read aloud);
+- `instructions` – what to say, one at a time (Polish, numbers in words because the answer is read aloud); an item is a string, or `{text, media}` when it has its own picture;
+- `media` – optional name of the picture the mobile app shows while the step's instructions are said (`<set>/<picture>`, e.g. `cpr/compressions`); an instruction's own `media` wins, the question in `asks` keeps the picture of the last instruction. A scenario that uses pictures must have one for every instruction. The drawings live in the app (`poc/mobile/assets/illustrations/`) and need the same medical review as the text;
 - `asks` – an optional question asked after the instructions;
 - `actions` – codes from `actions.yaml` the rescuer may perform in this step;
 - `transitions` – `when` (a condition, in Polish) and `goto` (a step) or `handoff` (`scenario/step`); an optional `interrupt: true` marks a branch for an obstacle (e.g. no phone signal) that may be taken in the middle of a step, before all its instructions were said; other transitions wait until the step is done; a step without transitions ends the scenario;
 - `sources` – optional citations, see below;
 - `note` – where the step goes beyond the guideline, for reviewers.
 
-The server (`poc/server/app/knowledge/`) validates the files at start-up and refuses to start when a transition, action or (if source files are present) citation does not exist, or a step is unreachable. It walks through a scenario one instruction at a time and shows the model only the current one.
+The server (`poc/server/app/knowledge/`) validates the files at start-up and refuses to start when a transition, action or (if source files are present) citation does not exist, a step is unreachable, or a scenario with pictures has an instruction without one. It walks through a scenario one instruction at a time and shows the model only the current one.
 
 ## Sources
 

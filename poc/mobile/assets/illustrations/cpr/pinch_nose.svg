@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 300">
+  <path d="M16 266 L504 266" fill="none" stroke="#B8C2CC" stroke-width="2"/>
+  <g transform="translate(-10 60) scale(0.78)">
+
+  <path d="M150 266 Q166 226 196 204 L222 146 L236 160 Q258 176 286 192 L282 266 Z" fill="#E3C3A6"/>
+  <path d="M282 266 L282 196 Q300 178 330 160 Q372 138 430 134 Q520 130 700 136 L700 266 Z" fill="#6C8EBF" stroke="#2A3441" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M290 192 Q300 206 318 202" fill="none" stroke="#2A3441" stroke-width="1.6" stroke-linecap="round"/>
+
+  <path d="M112 264 Q68 254 66 210 Q64 170 96 150 Q118 136 140 136 Q150 140 156 138 L172 114 Q178 108 182 116 L184 130 Q190 131 192 136 Q197 136 199 140 Q204 138 208 141 Q218 138 226 147 Q234 156 234 160 Q256 176 286 192 L282 196 L282 266 Z" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M112 264 Q68 254 66 210 Q64 170 96 150 Q104 145 114 142 Q88 168 92 206 Q96 240 140 264 Z" fill="#7A5C45"/>
+  <ellipse cx="150" cy="206" rx="11" ry="15" transform="rotate(-20 150 206)" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8"/>
+  <path d="M148 198 Q142 206 148 214" fill="none" stroke="#2A3441" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M126 146 Q137 141 148 145" fill="none" stroke="#2A3441" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M131 156 Q140 161 149 156" fill="none" stroke="#2A3441" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M177 124 Q181 128 186 126" fill="none" stroke="#2A3441" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M195 139 Q201 154 210 142 Z" fill="#6B2A2A" stroke="#2A3441" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M-50 -10 L22 66" fill="none" stroke="#C8423B" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M22 66 L92 130" fill="none" stroke="#E3C3A6" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <path d="M84 128 Q112 120 132 130 Q140 136 132 144 Q110 152 86 150 Q76 140 84 128 Z" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M120 128 Q148 108 172 110" fill="none" stroke="#E3C3A6" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M124 144 Q156 136 182 124" fill="none" stroke="#E3C3A6" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <circle cx="174" cy="110" r="5.5" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8"/>
+  <circle cx="183" cy="124" r="5.5" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8"/>
+  <path d="M340 -120 L306 -36" fill="none" stroke="#C8423B" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M306 -36 L258 154" fill="none" stroke="#E3C3A6" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <path d="M246 150 Q256 146 262 154 Q264 164 254 168 L236 172 Q228 170 232 162 Z" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M236 168 L230 166" fill="none" stroke="#2A3441" stroke-width="1.4" stroke-linecap="round"/>
+  </g>
+  <text x="16" y="28" text-anchor="start" font-family="sans-serif" font-size="18" font-weight="bold" fill="#2A3441">Zaciśnij nos</text>
+  <text x="16" y="52" text-anchor="start" font-family="sans-serif" font-size="16" font-weight="bold" fill="#8A94A6">usta lekko otwarte</text>
+</svg>
