@@ -44,6 +44,12 @@ ClientMessage = Annotated[AskMessage | CancelMessage, Field(discriminator="type"
 _client_message: TypeAdapter[AskMessage | CancelMessage] = TypeAdapter(ClientMessage)
 
 
+class StepEvent(BaseModel):
+    type: Literal["step"] = "step"
+    id: str
+    media: str | None
+
+
 class DeltaEvent(BaseModel):
     type: Literal["delta"] = "delta"
     id: str
@@ -69,7 +75,7 @@ class ErrorEvent(BaseModel):
     message: str
 
 
-ServerEvent = DeltaEvent | DoneEvent | CancelledEvent | ErrorEvent
+ServerEvent = StepEvent | DeltaEvent | DoneEvent | CancelledEvent | ErrorEvent
 
 
 class _ChatSession:
@@ -132,6 +138,7 @@ class _ChatSession:
             task = None
             if self._dialogue is not None:
                 task = await self._dialogue.begin_turn(msg.text, history)
+                await self._send(StepEvent(id=msg.id, media=self._dialogue.media))
             messages = build_prompt(self._system_prompt, history, msg.text, task)
             async for ev in self._llm.generate_stream(messages, LLMOptions()):
                 if isinstance(ev, LLMDelta):

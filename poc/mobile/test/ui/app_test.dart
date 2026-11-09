@@ -6,6 +6,7 @@ import 'package:first_aid_voice_assistant/ui/conversation/view_models/conversati
 import 'package:first_aid_voice_assistant/domain/models/speech_engine.dart';
 import 'package:first_aid_voice_assistant/data/repositories/settings_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../fakes/services.dart';
@@ -26,6 +27,14 @@ Future<void> tapOnStartScreen(WidgetTester tester, String text) async {
   await tester.pumpAndSettle();
 }
 
+Finder svg(String file) => find.byWidgetPredicate(
+  (widget) =>
+      widget is SvgPicture &&
+      widget.bytesLoader is SvgAssetLoader &&
+      (widget.bytesLoader as SvgAssetLoader).assetName ==
+          'assets/illustrations/cpr/$file',
+);
+
 void main() {
   late SettingsRepository settings;
 
@@ -35,11 +44,23 @@ void main() {
 
   late FakeChatSocket socket;
   late List<FakeSpeechOutput> outputs;
+  late FakeEmergencyDialer dialer;
+  late FakeBeatClock beatClock;
 
   setUp(() {
     socket = FakeChatSocket();
     outputs = [];
+    dialer = FakeEmergencyDialer();
+    beatClock = FakeBeatClock();
   });
+
+  final inputs = <FakeSpeechInput>[];
+
+  FakeSpeechInput speechInput() {
+    final input = FakeSpeechInput(engine: settings.speechEngine);
+    inputs.add(input);
+    return input;
+  }
 
   FakeSpeechOutput speechOutput(VoiceEngine voice) {
     final output = FakeSpeechOutput(label: voice.title);
@@ -52,17 +73,32 @@ void main() {
       settings: settings,
       modelStore: FakeModelStore({SpeechEngine.parakeet}),
       createConversationViewModel: () => ConversationViewModel(
-        input: FakeSpeechInput(engine: settings.speechEngine),
+        input: speechInput(),
         output: speechOutput(settings.voiceEngine),
         assistant: AssistantRepository(
           socket: socket,
           serverUri: () => settings.chatUri,
         ),
+        beatClock: beatClock,
+        listenAgain: Duration.zero,
         clock: () => DateTime(2026, 10, 27, 14, 21, 3),
       ),
       createSpeechOutput: speechOutput,
+      emergencyDialer: dialer,
     ),
   );
+
+  Future<void> sayAndWait(WidgetTester tester, String text) async {
+    inputs.last.emitUtterance(text);
+    await tester.pump();
+    await tester.pump(endOfTurnSilence + const Duration(milliseconds: 100));
+  }
+
+  Future<void> askOnce(WidgetTester tester) async {
+    await tester.pumpWidget(app());
+    await tapOnStartScreen(tester, 'Rozpocznij rozmowę testową');
+    await sayAndWait(tester, 'Kolega nie oddycha');
+  }
 
   testWidgets('start screen says it is a demo', (tester) async {
     usePhoneScreen(tester);
@@ -80,48 +116,148 @@ void main() {
     await tapOnStartScreen(tester, 'Rozpocznij rozmowę testową');
 
     expect(find.text('Rozmowa testowa'), findsOneWidget);
-    expect(find.text('Parakeet v3 · Głos systemowy · gotowe'), findsOneWidget);
+    expect(find.text(greeting), findsOneWidget);
+    expect(outputs.single.spoken.join(' '), greeting);
+    expect(find.textContaining('gotowe'), findsNothing);
   });
 
-  testWidgets('tapping to start and to stop shows the recognised text', (
+  testWidgets('the conversation listens by itself, without taps', (
     tester,
   ) async {
     usePhoneScreen(tester);
     await tester.pumpWidget(app());
     await tapOnStartScreen(tester, 'Rozpocznij rozmowę testową');
 
-    await tester.tap(find.bySemanticsLabel('Zacznij mówić'));
-    await tester.pumpAndSettle();
-    expect(find.text('Naciśnij, aby zakończyć'), findsOneWidget);
+    expect(find.text('Słucham'), findsOneWidget);
+    expect(inputs.last.listening, isTrue);
 
-    await tester.tap(find.bySemanticsLabel('Zakończ mówienie'));
-    await tester.pumpAndSettle();
+    await sayAndWait(tester, 'Kolega nie oddycha');
 
     expect(find.text('Kolega nie oddycha'), findsOneWidget);
-    expect(find.text('Poczekaj, aż asystent skończy'), findsOneWidget);
+    expect(find.text('Asystent myśli…'), findsOneWidget);
+    expect(find.text('Słucham'), findsOneWidget);
   });
 
-  testWidgets('the answer appears while it is read aloud', (tester) async {
+  testWidgets('the answer appears in the middle while it is read aloud', (
+    tester,
+  ) async {
     usePhoneScreen(tester);
-    await tester.pumpWidget(app());
-    await tapOnStartScreen(tester, 'Rozpocznij rozmowę testową');
-    await tester.tap(find.bySemanticsLabel('Zacznij mówić'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.bySemanticsLabel('Zakończ mówienie'));
-    await tester.pumpAndSettle();
+    await askOnce(tester);
 
     socket.connection!.delta('Zadzwoń pod sto dwanaście. ');
     await tester.pumpAndSettle();
 
     expect(find.text('Zadzwoń pod sto dwanaście. '), findsOneWidget);
-    expect(outputs.single.spoken, ['Zadzwoń pod sto dwanaście.']);
+    expect(outputs.single.spoken.last, 'Zadzwoń pod sto dwanaście.');
     expect(find.text('Przerwij'), findsOneWidget);
 
     socket.connection!.done('Zadzwoń pod sto dwanaście.');
     await tester.pumpAndSettle();
-    expect(find.text('głos po 1,0 s · model 0,1 s'), findsOneWidget);
+    expect(find.text('Zadzwoń pod sto dwanaście.'), findsOneWidget);
     expect(find.text('Przerwij'), findsNothing);
-    expect(find.text('Naciśnij i mów'), findsOneWidget);
+    expect(find.text('Słucham'), findsOneWidget);
+  });
+
+  testWidgets('the microphone is muted while the assistant speaks', (
+    tester,
+  ) async {
+    usePhoneScreen(tester);
+    await askOnce(tester);
+    outputs.single.holdSentences = true;
+    socket.connection!.done('Zadzwoń pod sto dwanaście.');
+    await tester.pump();
+
+    expect(find.text('Mówi asystent'), findsOneWidget);
+    expect(find.text('Asystent mówi…'), findsOneWidget);
+    expect(inputs.last.muted, isTrue);
+
+    outputs.single.finishSentence();
+    await tester.pumpAndSettle();
+    expect(find.text('Słucham'), findsOneWidget);
+    expect(inputs.last.muted, isFalse);
+  });
+
+  testWidgets('counting aloud is not asked or shown', (tester) async {
+    usePhoneScreen(tester);
+    await tester.pumpWidget(app());
+    await tapOnStartScreen(tester, 'Rozpocznij rozmowę testową');
+    await sayAndWait(tester, 'jeden dwa trzy');
+
+    await tester.tap(find.bySemanticsLabel('Historia rozmowy'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('jeden dwa trzy'), findsNothing);
+    expect(socket.connection, isNull);
+  });
+
+  testWidgets('the history shows every message with its timings', (
+    tester,
+  ) async {
+    usePhoneScreen(tester);
+    await askOnce(tester);
+    socket.connection!.done('Zadzwoń pod sto dwanaście.');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.bySemanticsLabel('Historia rozmowy'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Historia rozmowy'), findsOneWidget);
+    expect(find.text('głos po 1,0 s · model 0,1 s'), findsOneWidget);
+    expect(find.text('14:21:02 · mowa 2,0 s · tekst po 0,3 s'), findsOneWidget);
+  });
+
+  testWidgets('the picture of the step is shown with a metronome for CPR', (
+    tester,
+  ) async {
+    usePhoneScreen(tester);
+    await askOnce(tester);
+    expect(svg('start.svg'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('Rytm uciśnięć')), findsNothing);
+
+    socket.connection!
+      ..step('cpr/compressions')
+      ..delta('Uciskaj mocno i szybko.');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(
+      find.bySemanticsLabel('Rytm uciśnięć 110 na minutę'),
+      findsOneWidget,
+    );
+    expect(svg('compressions.svg'), findsOneWidget);
+    expect(find.text('Uciskaj mocno i szybko.'), findsOneWidget);
+
+    expect(beatClock.isRunning, isTrue);
+    beatClock.beat();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    socket.connection!.done('Uciskaj mocno i szybko.');
+    await tester.pump(const Duration(seconds: 1));
+    await sayAndWait(tester, 'Mam przechylić głowę?');
+    socket.connection!.step('cpr/head-tilt');
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.bySemanticsLabel(RegExp('Rytm uciśnięć')), findsNothing);
+    expect(svg('head_tilt.svg'), findsOneWidget);
+    expect(svg('compressions.svg'), findsNothing);
+    expect(beatClock.isRunning, isFalse);
+  });
+
+  testWidgets('the 112 button opens the phone and is always there', (
+    tester,
+  ) async {
+    usePhoneScreen(tester);
+    await tester.pumpWidget(app());
+    await tapOnStartScreen(tester, 'Rozpocznij rozmowę testową');
+
+    await tester.tap(find.bySemanticsLabel('Zadzwoń pod 112'));
+    await tester.pumpAndSettle();
+    expect(dialer.calls, 1);
+
+    dialer.succeeds = false;
+    await tester.tap(find.bySemanticsLabel('Zadzwoń pod 112'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Wybierz numer 112 ręcznie'), findsOneWidget);
   });
 
   testWidgets('the voice and the server are set in the settings', (
@@ -186,9 +322,6 @@ void main() {
     await tester.pumpAndSettle();
     await tapOnStartScreen(tester, 'Rozpocznij rozmowę testową');
 
-    expect(
-      find.text('Whisper small · Głos systemowy · gotowe'),
-      findsOneWidget,
-    );
+    expect(inputs.last.engine, SpeechEngine.whisperSmall);
   });
 }

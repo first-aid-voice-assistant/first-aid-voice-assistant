@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 300">
+  <path d="M16 272 L504 272" fill="none" stroke="#B8C2CC" stroke-width="2"/>
+  <g transform="translate(210 108) scale(0.6)">
+
+  <rect x="150" y="238" width="32" height="22" rx="6" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8"/>
+  <ellipse cx="128" cy="246" rx="28" ry="24" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8"/>
+  <path d="M104 254 Q98 230 118 222 Q108 238 114 266 Z" fill="#7A5C45"/>
+  <path d="M116 224 Q122 210 132 223" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M176 270 L176 236 Q184 222 210 220 Q250 214 290 222 Q330 230 360 236 L362 270 Z" fill="#6C8EBF" stroke="#2A3441" stroke-width="1.8"/>
+  <path d="M356 238 Q450 242 540 248 L540 270 L356 270 Z" fill="#44576D" stroke="#2A3441" stroke-width="1.8"/>
+  <path d="M532 248 L540 222 Q548 216 554 224 L556 268 L532 270 Z" fill="#2A3441"/>
+  </g>
+
+  <rect x="89" y="200" width="17" height="64" rx="7" fill="#2E4057"/>
+  <rect x="114" y="200" width="17" height="64" rx="7" fill="#2E4057"/>
+  <ellipse cx="97" cy="266" rx="13" ry="6" fill="#2A3441"/>
+  <ellipse cx="123" cy="266" rx="13" ry="6" fill="#2A3441"/>
+  <path d="M84 132 L76 166" fill="none" stroke="#C8423B" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M76 166 L74 200" fill="none" stroke="#E3C3A6" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <rect x="79" y="116" width="62" height="94" rx="22" fill="#C8423B" stroke="#2A3441" stroke-width="1.8"/>
+  <rect x="103" y="98" width="14" height="22" rx="5" fill="#E3C3A6"/>
+  <circle cx="110" cy="80" r="22" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8"/>
+  <path d="M88 80 Q88 57 110 57 Q132 57 132 80 Q122 68 110 68 Q98 68 88 80 Z" fill="#3A3A3A"/>
+  <path d="M136 132 L152 104" fill="none" stroke="#C8423B" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M152 104 L132 74" fill="none" stroke="#E3C3A6" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <ellipse cx="124" cy="70" rx="15" ry="5" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8"/>
+  <path d="M430 40 L470 108 L390 108 Z" fill="#F2B33D" stroke="#2A3441" stroke-width="1.8" stroke-linejoin="round"/>
+  <rect x="425" y="62" width="10" height="28" rx="5" fill="#2A3441"/>
+  <circle cx="430" cy="99" r="5" fill="#2A3441"/>
+  <text x="16" y="28" text-anchor="start" font-family="sans-serif" font-size="18" font-weight="bold" fill="#2A3441">Rozejrzyj się: ruch, prąd, ogień, gaz</text>
+</svg>

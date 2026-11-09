@@ -23,6 +23,7 @@ class SegmentedTranscriber {
     required this._decode,
     this.partialInterval = const Duration(milliseconds: 500),
     this.minDecodeSamples = 4000,
+    this.keptSamples = 16000 * 30,
     DateTime Function()? clock,
   }) : _now = clock ?? DateTime.now;
 
@@ -30,6 +31,7 @@ class SegmentedTranscriber {
   final DateTime Function() _now;
   final Duration partialInterval;
   final int minDecodeSamples;
+  final int keptSamples;
 
   final _SampleBuffer _audio = _SampleBuffer();
   final Queue<SpeechRegion> _regions = Queue<SpeechRegion>();
@@ -54,10 +56,22 @@ class SegmentedTranscriber {
 
   int get length => _audio.length;
 
+  int get keptFrom => _audio.first;
+
   void addAudio(Float32List samples) {
     if (_closed) return;
     _audio.add(samples);
+    _discardOldAudio();
     _pump();
+  }
+
+  void _discardOldAudio() {
+    if (_audio.length - _audio.first < 2 * keptSamples) return;
+    var keepFrom = _audio.length - keptSamples;
+    if (_regions.isNotEmpty) keepFrom = min(keepFrom, _regions.first.start);
+    final active = _activeStart;
+    if (active != null) keepFrom = min(keepFrom, active);
+    _audio.discardBefore(keepFrom);
   }
 
   void setActiveStart(int? start) {
@@ -182,18 +196,36 @@ class SegmentedTranscriber {
 
 class _SampleBuffer {
   Float32List _data = Float32List(16000 * 10);
-  int length = 0;
+  int _offset = 0;
+  int _filled = 0;
+
+  int get length => _offset + _filled;
+
+  int get first => _offset;
 
   void add(Float32List samples) {
-    if (length + samples.length > _data.length) {
-      final grown = Float32List(max(_data.length * 2, length + samples.length));
-      grown.setRange(0, length, _data);
+    if (_filled + samples.length > _data.length) {
+      final grown = Float32List(
+        max(_data.length * 2, _filled + samples.length),
+      );
+      grown.setRange(0, _filled, _data);
       _data = grown;
     }
-    _data.setRange(length, length + samples.length, samples);
-    length += samples.length;
+    _data.setRange(_filled, _filled + samples.length, samples);
+    _filled += samples.length;
   }
 
-  Float32List slice(int start, int end) =>
-      Float32List.fromList(_data.sublist(start, end));
+  void discardBefore(int index) {
+    final dropped = min(index, length) - _offset;
+    if (dropped <= 0) return;
+    _data.setRange(0, _filled - dropped, _data, dropped);
+    _filled -= dropped;
+    _offset += dropped;
+  }
+
+  Float32List slice(int start, int end) {
+    final from = max(start, _offset) - _offset;
+    final to = max(end, _offset) - _offset;
+    return Float32List.fromList(_data.sublist(from, max(from, to)));
+  }
 }

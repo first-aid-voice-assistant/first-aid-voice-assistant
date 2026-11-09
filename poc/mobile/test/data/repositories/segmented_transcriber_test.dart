@@ -119,4 +119,42 @@ void main() {
 
     expect(segments, isEmpty);
   });
+
+  test('long listening keeps only the recent audio', () async {
+    final t = SegmentedTranscriber(
+      decode: decoder.decode,
+      minDecodeSamples: 100,
+      keptSamples: 1000,
+      clock: () => now,
+    );
+
+    for (var i = 0; i < 10; i++) {
+      t.addAudio(Float32List(500));
+    }
+
+    expect(t.length, 5000);
+    expect(t.keptFrom, greaterThanOrEqualTo(3000));
+  });
+
+  test('old audio of speech still waiting to be decoded is kept', () async {
+    final t = SegmentedTranscriber(
+      decode: decoder.decode,
+      minDecodeSamples: 100,
+      keptSamples: 1000,
+      clock: () => now,
+    );
+    decoder.gate = Completer<void>();
+    t.addAudio(Float32List(500));
+    t.addRegion(const SpeechRegion(0, 300));
+    t.addRegion(const SpeechRegion(200, 500));
+
+    for (var i = 0; i < 10; i++) {
+      t.addAudio(Float32List(500));
+    }
+    expect(t.keptFrom, lessThanOrEqualTo(200));
+
+    decoder.gate!.complete();
+    await t.finish();
+    expect(decoder.decodedLengths, [300, 300]);
+  });
 }

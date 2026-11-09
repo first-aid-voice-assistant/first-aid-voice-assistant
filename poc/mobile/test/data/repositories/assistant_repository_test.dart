@@ -57,6 +57,24 @@ void main() {
     expect(done.firstTokenTime, const Duration(milliseconds: 120));
   });
 
+  test('passes on the picture of the step before the answer', () async {
+    final events = <AnswerEvent>[];
+    assistant.ask(text: 'Nie oddycha').listen(events.add);
+    await settle();
+
+    socket.connection!
+      ..step('cpr/compressions')
+      ..delta('Uciskaj.')
+      ..emit({'type': 'action_logged', 'id': 'q1', 'entry': <String, Object>{}})
+      ..done('Uciskaj.');
+    await settle();
+
+    expect((events[0] as AnswerStep).media, 'cpr/compressions');
+    expect(events[1], isA<AnswerDelta>());
+    expect(events[2], isA<AnswerCompleted>());
+    expect(events, hasLength(3));
+  });
+
   test('a new question ends the previous answer stream', () async {
     var firstClosed = false;
     assistant

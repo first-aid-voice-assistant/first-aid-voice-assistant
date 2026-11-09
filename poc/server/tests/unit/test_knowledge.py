@@ -147,6 +147,37 @@ def test_unreachable_step_is_rejected(kb_copy: Path) -> None:
         load_knowledge(kb_copy)
 
 
+def test_every_bls_instruction_has_a_picture() -> None:
+    bls = next(s for s in load_knowledge(KNOWLEDGE).scenarios if s.id == "adult-bls")
+
+    pictures = [m for step in bls.steps for m in step.unit_media]
+
+    assert None not in pictures
+    assert bls.step("compressions_only").unit_media == ["cpr/compressions", "cpr/compressions"]
+    # The ask shows the picture of the last instruction.
+    assert bls.step("check_breathing").unit_media[-1] == "cpr/check-breathing"
+
+
+def test_instruction_without_a_picture_in_a_scenario_with_pictures_is_rejected(
+    kb_copy: Path,
+) -> None:
+    def change(d: dict[str, Any]) -> None:
+        step = next(s for s in d["steps"] if s["id"] == "call_emergency")
+        step["instructions"][1] = step["instructions"][1]["text"]
+
+    _edit_scenario(kb_copy, "adult-bls", change)
+
+    with pytest.raises(KnowledgeError, match="call_emergency: instruction 2 has no media"):
+        load_knowledge(kb_copy)
+
+
+def test_malformed_media_key_is_rejected(kb_copy: Path) -> None:
+    _edit_scenario(kb_copy, "adult-bls", lambda d: d["steps"][0].update(media="Compressions.gif"))
+
+    with pytest.raises(ValueError, match="media"):
+        load_knowledge(kb_copy)
+
+
 def test_handoff_to_unknown_scenario_is_rejected(kb_copy: Path) -> None:
     def change(d: dict[str, Any]) -> None:
         step = next(s for s in d["steps"] if s["id"] == "unresponsive")

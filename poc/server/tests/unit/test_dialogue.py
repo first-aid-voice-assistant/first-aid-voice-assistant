@@ -239,9 +239,60 @@ async def test_a_stuck_cursor_asks_instead_of_repeating_forever() -> None:
     assert "nie powtarzaj poprzedniego polecenia" in third.lower()
 
 
-def _ask(ws: Any, ask_id: str, text: str, history: list[dict[str, str]]) -> None:
+async def test_every_turn_names_the_picture_of_its_instruction() -> None:
+    dialogue, _ = make(["0", BLS, "1", "1"], intents=["POTWIERDZENIE", "POTWIERDZENIE", "INNE"])
+
+    await turn(dialogue, "Halo")
+    no_scenario = dialogue.media
+    await turn(dialogue, "Nie rusza się")
+    safety = dialogue.media
+    await turn(dialogue, "Jest bezpiecznie")
+    response = dialogue.media
+    await turn(dialogue, "Nie reaguje")
+    call = dialogue.media
+    await turn(dialogue, "Mogę mu dać wody?")
+    question = dialogue.media
+    await turn(dialogue, "Dobrze")
+    speaker = dialogue.media
+
+    assert no_scenario is None
+    assert (safety, response, call) == (
+        "cpr/scene-safety",
+        "cpr/shake-shoulders",
+        "cpr/call-112",
+    )
+    assert question == "cpr/call-112"  # an answer outside the procedure keeps the picture
+    assert speaker == "cpr/speakerphone"
+
+
+async def test_a_repeated_instruction_keeps_its_picture() -> None:
+    dialogue, _ = make([BLS, "0"])
+    await turn(dialogue, "Nie rusza się")  # safety, its only instruction
+
+    task = await turn(dialogue, "Nie wiem")
+
+    assert "jeszcze nie spełnił warunku" in task
+    assert dialogue.media == "cpr/scene-safety"
+
+
+def test_websocket_sends_the_picture_before_the_answer() -> None:
+    llm = ScriptedLLM([BLS, "Upewnij się, że nic wam nie zagraża."])
+    app = create_app("configs/fake.yaml")
+    app.state.llm = llm
+    client = TestClient(app)
+
+    with client.websocket_connect("/v1/chat") as ws:
+        events = _ask(ws, "a1", "Kolega leży i się nie rusza", [])
+
+    assert events[0] == {"type": "step", "id": "a1", "media": "cpr/scene-safety"}
+    assert [e["type"] for e in events[1:]] == ["delta", "done"]
+
+
+def _ask(ws: Any, ask_id: str, text: str, history: list[dict[str, str]]) -> list[dict[str, Any]]:
     ws.send_json({"type": "ask", "id": ask_id, "text": text, "history": history})
+    events: list[dict[str, Any]] = []
     while True:
         event = ws.receive_json()
+        events.append(event)
         if event["type"] == "done" and event["id"] == ask_id:
-            return
+            return events

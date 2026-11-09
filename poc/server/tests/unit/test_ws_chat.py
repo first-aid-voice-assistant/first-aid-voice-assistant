@@ -33,7 +33,8 @@ def test_answer_is_streamed_and_ends_with_done(client: TestClient) -> None:
         ws.send_json({"type": "ask", "id": "a1", "text": "Kolega nie oddycha"})
         events = receive_until(ws, "done", "a1")
 
-    *deltas, done = events
+    step, *deltas, done = events
+    assert step["type"] == "step"  # the scenarios are on in fake.yaml
     assert len(deltas) > 1
     assert all(e["type"] == "delta" and e["id"] == "a1" for e in deltas)
     assert "".join(e["text"] for e in deltas) == done["text"]
@@ -59,6 +60,7 @@ def test_cancel_stops_the_answer(client: TestClient) -> None:
     client.app.state.llm = FakeLLM(reply=SLOW_REPLY, delay=0.05)  # type: ignore[attr-defined]
     with client.websocket_connect("/v1/chat") as ws:
         ws.send_json({"type": "ask", "id": "a1", "text": "hej"})
+        assert ws.receive_json()["type"] == "step"
         assert ws.receive_json()["type"] == "delta"
         ws.send_json({"type": "cancel", "id": "a1"})
         events = receive_until(ws, "cancelled", "a1")
@@ -88,7 +90,7 @@ def test_cancel_of_another_answer_is_ignored(client: TestClient) -> None:
         ws.send_json({"type": "ask", "id": "a1", "text": "hej"})
         events = receive_until(ws, "done", "a1")
 
-    assert {e["type"] for e in events} == {"delta", "done"}
+    assert {e["type"] for e in events} == {"step", "delta", "done"}
 
 
 def test_model_failure_is_reported_as_error(client: TestClient) -> None:

@@ -1,6 +1,6 @@
 # PoC mobile app
 
-Demo mobile app of the first-aid voice assistant (Flutter, Android and iOS). **Status:** the test conversation works end to end – speech is recognised on the phone (Parakeet, Vosk or Whisper), every utterance goes to the [PoC server](../server) over a WebSocket, and the answer appears while it is generated and is read aloud sentence by sentence (system voice or Piper). You and the assistant take turns: when you stop speaking, the microphone switches off by itself and the assistant answers; when it has finished, tap the button to speak again ("Przerwij" stops it earlier). Why Flutter: [ADR 0001](../../docs/adr/0001-flutter-for-mobile-app.md).
+Demo mobile app of the first-aid voice assistant (Flutter, Android and iOS). **Status:** the test conversation works end to end – speech is recognised on the phone (Parakeet, Vosk or Whisper), every utterance goes to the [PoC server](../server) over a WebSocket, and the answer appears while it is generated and is read aloud sentence by sentence (system voice or Piper). The conversation is hands-free: the assistant greets you aloud, then the microphone listens by itself; while the assistant speaks the microphone is off and it switches on again when the assistant has finished, so the assistant never hears itself. Counting aloud is not taken as a question. The CPR metronome beats through the whole compression step ("Przerwij" stops an answer). Why Flutter: [ADR 0001](../../docs/adr/0001-flutter-for-mobile-app.md).
 
 | | |
 |---|---|
@@ -16,8 +16,9 @@ The demo checks that a voice conversation with the assistant works end to end.
 | Screen / step | Status |
 |---|---|
 | **Start** – "demo version" banner, what the demo checks, button to the test conversation | done |
-| **Test conversation** – tap to start, speak with pauses, tap to stop; text appears while speaking, every utterance becomes a message with its time and timings | done |
-| Answers from the [PoC server](../server) over a WebSocket, shown while streamed and read aloud sentence by sentence; the microphone stops by itself when you finish and stays off while the assistant answers; "Przerwij" stops the answer | done |
+| **Test conversation** – greets aloud and listens without taps; the indicator in the middle shows "Słucham" or "Mówi asystent" by itself; text appears while speaking, every utterance becomes a message with its time and timings; the screen stays on | done |
+| Answers from the [PoC server](../server) over a WebSocket, shown while streamed and read aloud sentence by sentence; the microphone is off while they are read; counting aloud and fillers are ignored; "Przerwij" stops the answer | done |
+| CPR metronome (110/min) through the whole compression step, also while the assistant speaks; after a minute of silence during compressions a short reminder to keep going | done |
 | **Settings** – speech engine (Parakeet, Vosk, Whisper tiny / base / small) | done |
 | Settings – voice (system / Piper) with "Odsłuchaj głos", server address | done |
 
@@ -78,7 +79,7 @@ Server: start the [PoC server](../server) and set its address in **Settings → 
 ## First run
 
 - The speech engine is chosen in **Settings** (default: Parakeet v3). When the test conversation opens with an engine that is not on the phone yet, the app downloads it once with a progress bar (use Wi-Fi for Parakeet); interrupted downloads resume and every file is checked against its size and SHA-256.
-- The app asks for microphone access on the first tap of the talk button.
+- The app asks for microphone access when the test conversation starts listening.
 - iOS: the deployment target is 15.6. When CocoaPods creates `ios/Podfile` on a Mac, set `platform :ios, '15.6'` there too. The iOS build has not been tried yet.
 
 ## Checks
@@ -98,14 +99,14 @@ lib/
 ├── main.dart                 # entry point: creates the dependencies, runs the app
 ├── config/                   # dependencies.dart – builds the real services for the chosen engine (fakes in tests)
 ├── routing/                  # router.dart – route names and which screen each one opens
-├── utils/                    # small shared helpers (times in Polish format, transcript clean-up, PCM conversion)
+├── utils/                    # small shared helpers (times in Polish format, transcript clean-up, PCM conversion, counting filter)
 ├── ui/                       # UI layer – feature-first
 │   ├── core/                 #   app.dart (root widget), themes/, ui/ (shared widgets, demo banner)
 │   └── <feature>/            #   start/, conversation/, settings/
 │       ├── view_models/      #     state and logic of the screen (ChangeNotifier)
 │       └── widgets/          #     <feature>_screen.dart and its widgets
 ├── data/                     # data layer – shared by features
-│   ├── services/             #   wrap the outside world: microphone, speech libraries, TTS, audio player, WebSocket, downloads, phone storage
+│   ├── services/             #   wrap the outside world: microphone, speech libraries, TTS, audio player, metronome clock, screen wake lock, WebSocket, downloads, phone storage
 │   ├── repositories/         #   logic exposed to view models (speech input and output, assistant, answer speaker, settings)
 │   └── model/                #   API models (WebSocket chat messages)
 └── domain/
@@ -113,6 +114,6 @@ lib/
 test/                         # tests mirroring lib/ (ui/, data/, utils/); fakes/ – fake services shared by the tests
 ```
 
-Other folders: `android/`, `ios/` (platform projects: microphone permission, SDK 37.0, ProGuard rules for Vosk, iOS 15.6), `docs/` (architecture, conventions), `pubspec.yaml` (dependencies: sherpa_onnx, vosk_flutter_service, whisper_cpp_flutter_plus, record, flutter_tts, audioplayers, web_socket_channel, shared_preferences, path_provider, archive, crypto).
+Other folders: `android/`, `ios/` (platform projects: microphone permission, dialer query for the 112 button, SDK 37.0, ProGuard rules for Vosk, iOS 15.6), `assets/illustrations/` (step illustrations, SVG, drawn for the project), `docs/` (architecture, conventions), `pubspec.yaml` (dependencies: sherpa_onnx, vosk_flutter_service, whisper_cpp_flutter_plus, record, flutter_tts, audioplayers, web_socket_channel, shared_preferences, path_provider, archive, crypto, flutter_svg, url_launcher, wakelock_plus).
 
 Working rules: [AGENTS.md](AGENTS.md) and the project-wide [AGENTS.md](../../AGENTS.md).
