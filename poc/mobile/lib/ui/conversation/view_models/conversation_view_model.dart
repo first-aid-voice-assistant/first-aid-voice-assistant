@@ -6,8 +6,10 @@ import '../../../data/repositories/answer_speaker.dart';
 import '../../../data/repositories/assistant_repository.dart';
 import '../../../data/repositories/speech_input.dart';
 import '../../../data/repositories/speech_output.dart';
+import '../../../data/services/metronome_sound.dart';
 import '../../../domain/models/chat_message.dart';
 import '../../../domain/models/conversation_entry.dart';
+import '../../../domain/models/illustration.dart';
 import '../../../domain/models/utterance.dart';
 
 enum ConversationStatus {
@@ -32,6 +34,7 @@ class ConversationViewModel extends ChangeNotifier {
     required this._input,
     required this._output,
     required this._assistant,
+    this._metronome,
     this.endOfTurn = endOfTurnSilence,
     DateTime Function()? clock,
   }) : _now = clock ?? DateTime.now;
@@ -39,6 +42,7 @@ class ConversationViewModel extends ChangeNotifier {
   final SpeechInput _input;
   final SpeechOutput _output;
   final AssistantRepository _assistant;
+  final MetronomeSound? _metronome;
   final Duration endOfTurn;
   final DateTime Function() _now;
 
@@ -55,6 +59,8 @@ class ConversationViewModel extends ChangeNotifier {
   StreamSubscription<AnswerEvent>? _answer;
   AnswerSpeaker? _speaker;
   int? _answerIndex;
+  String? _media;
+  DateTime? _mediaSince;
   bool _disposed = false;
 
   List<ConversationEntry> get entries => List.unmodifiable(_entries);
@@ -75,6 +81,37 @@ class ConversationViewModel extends ChangeNotifier {
       _status == ConversationStatus.ready &&
       assistantActivity == AssistantActivity.idle;
   bool get isRecording => _status == ConversationStatus.recording;
+  String? get media => _media;
+  Duration get mediaShownFor =>
+      _mediaSince == null ? Duration.zero : _now().difference(_mediaSince!);
+
+  bool get metronomeAudible =>
+      Illustrations.of(_media).hasMetronome &&
+      _status == ConversationStatus.ready &&
+      assistantActivity == AssistantActivity.idle;
+
+  void onMetronomeBeat() {
+    final metronome = _metronome;
+    if (_disposed || metronome == null || !metronomeAudible) return;
+    unawaited(metronome.click());
+  }
+
+  String? get latestAnswer {
+    final answer = _entries.whereType<AssistantMessage>().lastOrNull;
+    return answer == null || answer.text.isEmpty ? null : answer.text;
+  }
+
+  String? get latestUserText {
+    if (_partialText.isNotEmpty &&
+        (_status == ConversationStatus.recording ||
+            _status == ConversationStatus.transcribing)) {
+      return _partialText;
+    }
+    for (final entry in _entries.reversed) {
+      if (entry is UserMessage) return entry.utterance.text;
+    }
+    return null;
+  }
 
   AssistantActivity get assistantActivity {
     final speaker = _speaker;
@@ -262,6 +299,12 @@ class ConversationViewModel extends ChangeNotifier {
   void _onAnswerEvent(AnswerEvent event, AnswerSpeaker speaker) {
     if (_disposed || !identical(_speaker, speaker)) return;
     switch (event) {
+      case AnswerStep(:final media):
+        if (media != _media) {
+          _media = media;
+          _mediaSince = _now();
+          notifyListeners();
+        }
       case AnswerDelta(:final text):
         _updateAnswer(
           speaker,
@@ -374,6 +417,7 @@ class ConversationViewModel extends ChangeNotifier {
     _input.dispose();
     _output.dispose();
     _assistant.dispose();
+    _metronome?.dispose();
     super.dispose();
   }
 }

@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Created** | 2026-10-26 |
-| **Version** | 0.9 |
+| **Version** | 1.1 |
 
 > Status: the whole demo loop works – on-device speech recognition with three selectable engines, answers from the PoC server over a WebSocket, read aloud while they are streamed (system voice or Piper); the user and the assistant take turns.
 
@@ -29,7 +29,8 @@ tap again ◀── speaker ◀── TTS, sentence by sentence ◀── senten
 | Screen | Content | Status |
 |---|---|---|
 | Start | "Demo version" banner, what the demo checks, "Start test conversation" button, note about 112 | done |
-| Test conversation | engine and voice status, partial text of the utterance in progress, one message per utterance with its time and timings, assistant answers growing while streamed (with "głos po X s · model Y s", "przerwano"), status line ("Asystent myśli / mówi…") with "Przerwij", tap-to-start / tap-to-stop button | done |
+| Test conversation | engine and voice status only while they are being prepared or failed (the chosen engine and voice are in the settings); centred: the start picture (a person talking to the phone) until the first step, then the illustration of the current step (from the server's `step` event, animated, with a 110/min metronome and elapsed time for compressions) and the assistant's latest answer in large type, growing while streamed; below it the user's last or partial words; status line ("Asystent myśli / mówi…") with "Przerwij"; bottom row: "112" (opens the phone dialer, works without the server), tap-to-start / tap-to-stop button, "Historia" | done |
+| History (bottom sheet) | one message per utterance with its time and timings, assistant answers with "głos po X s · model Y s", "przerwano"; updates live | done |
 | Settings | speech engine (Parakeet, Vosk, Whisper tiny / base / small); voice (system / Piper) with "Odsłuchaj głos"; server address | done |
 
 ## Speech engines
@@ -64,6 +65,9 @@ The engine is chosen in the settings; the conversation uses the engine chosen wh
 | Assistant client | `lib/data/services/chat_socket.dart`, `lib/data/model/chat_protocol.dart`, `lib/data/repositories/assistant_repository.dart` | `ChatSocket` (package `web_socket_channel`); `AssistantRepository`: connects lazily and reconnects, sends `ask` with the history, turns server events into a stream of `AnswerEvent`s per question, `cancel`, timeouts (5 s to connect, 30 s without an event) | done |
 | Speech output | `lib/data/repositories/speech_output.dart` | `SpeechOutput` interface (`prepare`, `prefetch`, `speak`, `stop`); `SystemSpeechOutput` (needs a `pl-PL` system voice); `SynthesizedSpeechOutput` (download → Piper → WAV → player; prepares the next sentence while the current one plays) | done |
 | TTS services | `lib/data/services/text_to_speech.dart`, `speech_synthesizer.dart`, `audio_output.dart` | `FlutterTextToSpeech` (`flutter_tts`, completion via handlers); `PiperSynthesizer` (sherpa-onnx `OfflineTts` in a worker isolate); `AudioPlayersOutput` (`audioplayers`, speaker, mixes with recording) | done |
+| Step illustrations | `lib/domain/models/illustration.dart`, `lib/ui/conversation/widgets/step_illustration.dart`, `assets/illustrations/cpr/` | `Illustrations`: picture name from the scenario (`cpr/compressions`) → SVG files (a still base and an optional moving overlay) and the kind of movement (press at 110/min with a metronome, pulse, none); no picture yet shows the start drawing, unknown names the scene. Movements: press (compressions, with the metronome), shake (shaking the shoulders), tilt (head tilt and chin lift, rotation around the neck), breathe (chest rising), pulse (hints such as sound waves or a target). `StepIllustration` animates the overlay with one `AnimationController`, so the press and the metronome share the beat; package `flutter_svg` | all 14 pictures of adult BLS in an instructional style with short captions (hand-written SVG files, edited directly; drafts for medical review) |
+| Metronome sound | `lib/data/services/metronome_sound.dart`, `assets/sounds/metronome_click.wav` | `MetronomeSound`; `AudioPlayersMetronomeSound` plays a 40 ms beep (1.6 kHz, short fade in and out) in the low-latency mode of `audioplayers`; the beat comes from the animation of `StepIllustration` | done |
+| Emergency call | `lib/data/services/emergency_dialer.dart` | `EmergencyDialer`; `PhoneEmergencyDialer` opens the dialer with 112 (package `url_launcher`, `tel:`); a failure shows "Wybierz numer 112 ręcznie" | done |
 | Answer speaker | `lib/data/repositories/answer_speaker.dart` | `AnswerSpeaker`: takes the streamed text, speaks complete sentences in order, knows what was spoken, stops at once | done |
 | Settings check | `lib/ui/settings/view_models/voice_check_view_model.dart` | "Odsłuchaj głos": prepares the chosen voice (downloads Piper) and reads a test sentence | done |
 
@@ -86,6 +90,8 @@ Naming note: in this guide a *repository* holds the logic and a *service* wraps 
 - **Taking turns:** after each utterance the app waits 1.2 s; new speech (partial text) cancels the wait, otherwise the microphone stops by itself and everything said in the turn is asked as one question. The button can also stop the turn by hand. While the assistant answers (thinking or speaking) the microphone is off and the talk button is disabled ("Poczekaj, aż asystent skończy"); "Przerwij" stops the answer ("przerwano", cancelled on the server).
 - **Reading aloud:** markdown marks and list numbers are removed before a sentence is spoken (small models ignore the "no markdown" rule of the prompt); the screen shows the text as received.
 - **Timings shown:** "głos po X s" – from the end of the user's speech to the first sound of the answer; "model Y s" – time to the first token on the server.
+- **Step picture:** the server sends `step` with the picture name before each answer; the picture stays until a different one arrives, so the metronome and its elapsed time run on while the user keeps doing compressions over several turns. Without the scenarios (or before one is chosen) the scene is shown. The picture names come from `knowledge/scenarios/`; a test checks that every name used there has an illustration.
+- **Metronome sound:** on the compression picture every beat of the animation (110/min) also beeps, but only while the assistant is silent and the microphone is off (`ConversationViewModel.metronomeAudible`); while the user or the assistant speaks it is silent, so the beep never reaches speech recognition.
 - **No server:** a failed connection, a server error or 30 s without an event ends the answer with a fixed message that is also spoken: no connection, call 112.
 - **Privacy:** no recorded audio is written to disk (Piper's synthesized sentences may pass through a temporary file on iOS).
 - **Errors:** a failed download, missing microphone access or a recognition error is shown in Polish and the screen stays usable.
@@ -103,3 +109,5 @@ Naming note: in this guide a *repository* holds the logic and a *service* wraps 
 | 0.7 | 2026-10-28 | File recognition mode removed; live recognition only |
 | 0.8 | 2026-10-29 | Three speech engines (Parakeet via sherpa-onnx, Vosk, Whisper via whisper.cpp); Silero VAD so that only speech is decoded; one message per utterance; tap to start and stop |
 | 0.9 | 2026-10-29 | Server connection over a WebSocket; answers shown and read aloud while streamed; two voices (system, Piper); turn taking with automatic end of the user's turn; settings for voice and server |
+| 1.0 | 2026-11-08 | Step screen: illustration of the current step (`step` event) with animation and metronome, latest answer in the middle, conversation history in a bottom sheet, "112" button |
+| 1.1 | 2026-11-09 | Metronome beeps in the rhythm of the compressions while nobody speaks |
