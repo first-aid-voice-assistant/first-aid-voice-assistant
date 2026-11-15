@@ -14,7 +14,7 @@ actions:
   - code: CALL_EMERGENCY
     name: Wezwanie służb ratunkowych
     level: layperson
-    synonyms: [dzwonię na sto dwanaście, dzwonię po pogotowie, dzwonię na 112, wezwałem karetkę]
+    synonyms: [dzwonię na sto dwanaście, dzwonię po pogotowie, dzwonię na 112, dzwonię na 999, dzwonię na dziewięćset dziewięćdziesiąt dziewięć, wezwałem karetkę]
 
   - code: OPEN_AIRWAY
     name: Udrożnienie dróg oddechowych (odgięcie głowy i uniesienie brody)
@@ -65,3 +65,38 @@ actions:
     name: Uciśnięcia nadbrzusza
     level: layperson
     synonyms: [uciskam brzuch, uciśnięcia nadbrzusza, manewr Heimlicha, naciskam na brzuch]
+
+  - code: ROLL_TO_RECOVERY_POSITION
+    name: Ułożenie w pozycji bocznej (bezpiecznej)
+    level: layperson
+    synonyms: [układam na boku, pozycja boczna, przekręcam go na bok, układam w pozycji bocznej]
+
+  - code: STABILISE_HEAD_NECK
+    name: Stabilizacja głowy i szyi (podejrzenie urazu kręgosłupa szyjnego)
+    level: layperson
+    synonyms: [trzymam mu głowę, podtrzymuję głowę, stabilizuję szyję, trzymam głowę nieruchomo]
+
+  - code: DIRECT_PRESSURE
+    name: Ucisk bezpośredni na krwawiącą ranę
+    level: layperson
+    synonyms: [uciskam ranę, naciskam na ranę, przyciskam ranę, zatrzymuję krwawienie]
+
+  - code: APPLY_DRESSING
+    name: Założenie opatrunku w ranę (zwykłego lub hemostatycznego)
+    level: layperson
+    synonyms: [zakładam opatrunek, wkładam opatrunek w ranę, przykładam gazę, opatrunek hemostatyczny]
+
+  - code: APPLY_PRESSURE_DRESSING
+    name: Założenie opatrunku uciskowego
+    level: layperson
+    synonyms: [zakładam opatrunek uciskowy, bandażuję ranę, zawijam bandażem]
+
+  - code: APPLY_TOURNIQUET
+    name: Założenie opaski uciskowej (staży) na kończynę
+    level: layperson
+    synonyms: [zakładam opaskę, zakładam staż, zakładam stazę, zaciskam opaskę, opaska uciskowa]
+
+  - code: NOTE_TOURNIQUET_TIME
+    name: Zapisanie godziny założenia opaski uciskowej
+    level: layperson
+    synonyms: [zapisuję godzinę, notuję godzinę założenia opaski]

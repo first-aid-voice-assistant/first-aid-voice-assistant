@@ -8,6 +8,7 @@ import yaml
 from fastapi.testclient import TestClient
 
 from app.knowledge import KnowledgeError, load_knowledge, load_scenario_prompts
+from app.knowledge.models import Scenario
 from app.main import create_app
 
 KNOWLEDGE = Path("../../knowledge")
@@ -48,7 +49,12 @@ def _edit_scenario(root: Path, name: str, change: Callable[[dict[str, Any]], Non
 def test_real_knowledge_base_is_valid() -> None:
     kb = load_knowledge(KNOWLEDGE)
 
-    assert {s.id for s in kb.scenarios} >= {"adult-bls", "adult-choking"}
+    assert {s.id for s in kb.scenarios} >= {
+        "adult-bls",
+        "adult-choking",
+        "adult-recovery-position",
+        "adult-severe-bleeding",
+    }
     assert {a.code for a in kb.actions} >= {"CHEST_COMPRESSIONS", "BACK_BLOWS"}
 
 
@@ -56,7 +62,7 @@ def test_bls_scenario_keeps_the_official_numbers() -> None:
     kb = load_knowledge(KNOWLEDGE)
     text = " ".join(u for sc in kb.scenarios for st in sc.steps for u in st.units)
 
-    # ERC 2025 / PRR: 5-6 cm, 100-120 per minute, 30:2, 10 seconds, check response before call.
+    # ERC 2025: 5-6 cm, 100-120 per minute, 30:2, 5 back blows, 10 seconds for two breaths.
     assert "co najmniej pięciu, ale nie więcej niż sześciu centymetrów" in text
     assert "od stu do stu dwudziestu uciśnięć na minutę" in text
     assert "trzydzieści uciśnięć do dwóch oddechów" in text
@@ -84,6 +90,64 @@ def test_choking_escalates_from_cough_to_back_blows_to_abdominal_thrusts() -> No
     assert "back_blows" in targets("encourage_cough")
     assert "abdominal_thrusts" in targets("back_blows")
     assert "call_and_alternate" in targets("abdominal_thrusts")
+
+
+def _scenario(scenario_id: str) -> Scenario:
+    return next(s for s in load_knowledge(KNOWLEDGE).scenarios if s.id == scenario_id)
+
+
+def test_every_step_cites_the_erc_guidelines() -> None:
+    kb = load_knowledge(KNOWLEDGE)
+
+    assert {s.id for s in kb.sources} == {"erc-2025-bls", "erc-2025-first-aid"}
+    for sc in kb.scenarios:
+        for step in sc.steps:
+            assert step.sources, f"{sc.id}/{step.id} cites no source"
+
+
+def test_recovery_position_is_not_used_after_trauma() -> None:
+    recovery = _scenario("adult-recovery-position")
+    start = recovery.step(recovery.start)
+
+    by_goto = {t.goto: t.when for t in start.transitions if t.goto}
+
+    assert "roll_to_side" in by_goto
+    assert "uraz" in by_goto["trauma_keep_still"]
+    assert "ROLL_TO_RECOVERY_POSITION" not in recovery.step("trauma_keep_still").actions
+
+
+def test_unresponsive_but_breathing_person_goes_to_the_recovery_position() -> None:
+    bls = _scenario("adult-bls")
+
+    handoffs = [t.handoff for t in bls.step("breathing_normally").transitions]
+
+    assert handoffs == ["adult-recovery-position/check_trauma"]
+
+
+def test_tourniquet_is_offered_only_after_direct_pressure_failed() -> None:
+    bleeding = _scenario("adult-severe-bleeding")
+    reaches_tourniquet = {
+        step.id
+        for step in bleeding.steps
+        if any(t.goto in {"tourniquet", "tourniquet_check"} for t in step.transitions)
+    }
+
+    assert reaches_tourniquet == {"direct_pressure", "tourniquet_check"}
+    assert "APPLY_TOURNIQUET" not in bleeding.step("direct_pressure").actions
+    assert "pięciu do siedmiu centymetrów" in " ".join(bleeding.step("tourniquet").units)
+    assert "Zapisz na opasce godzinę" in " ".join(bleeding.step("tourniquet").units)
+
+
+def test_bls_uses_the_aed_and_returns_to_compressions() -> None:
+    bls = _scenario("adult-bls")
+
+    assert {t.goto for t in bls.step("aed_shock").transitions} == {"resume_compressions"}
+    assert {t.goto for t in bls.step("aed_analyse").transitions} == {
+        "aed_shock",
+        "resume_compressions",
+    }
+    interrupts = {t.goto for t in bls.step("compressions_30_2").transitions if t.interrupt}
+    assert interrupts == {"aed_attach", "aed_analyse"}
 
 
 def test_citations_are_not_checked_without_source_files(kb_copy: Path) -> None:

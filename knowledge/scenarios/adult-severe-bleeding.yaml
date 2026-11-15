@@ -1,0 +1,168 @@
+# Life-threatening external bleeding in an adult, for a layperson. Based only on the ERC
+# Guidelines 2025 First Aid ("Control of life-threatening bleeding", Fig. 9): firm direct manual
+# pressure on the injury; a standard or haemostatic dressing pushed into the wound with firm
+# pressure on top; a pressure dressing once the bleeding is under control; a tourniquet as soon as
+# possible for life-threatening bleeding of a limb that direct pressure does not control, with the
+# time of application written on it. Wording is Polish and meant to be read aloud (numbers in
+# words); ids, structure and comments are English. No pictures yet (the app has none for this
+# scenario).
+#
+# NEEDS MEDICAL REVIEW: the guideline says to use only equipment you have been trained to use. The
+# tourniquet step is therefore offered only to a caller who has a manufactured tourniquet and
+# knows how to use it; otherwise the scenario keeps the pressure going until help arrives.
+id: adult-severe-bleeding
+title: Silne krwawienie zewnętrzne u osoby dorosłej
+trigger: >-
+  Dorosły poszkodowany ma silne, zagrażające życiu krwawienie z rany (krew tryska lub płynie
+  strumieniem, szybko przesiąka ubranie albo tworzy kałużę).
+level: layperson
+start: safety
+
+steps:
+  - id: safety
+    instructions:
+      - Upewnij się, że Ty i poszkodowany jesteście bezpieczni, na przykład że nie zagraża Wam ruch uliczny, rozlane substancje albo agresywna osoba.
+    transitions:
+      - when: jest bezpiecznie
+        goto: call_emergency
+      - when: coś zagraża ratownikowi
+        goto: unsafe
+    sources:
+      - {source: erc-2025-first-aid, section: Expectations of a first aid provider}
+      - {source: erc-2025-first-aid, section: "Structured first aid assessment of a person appearing ill, injured or in shock (ABCDE)"}
+
+  - id: unsafe
+    note: >-
+      NEEDS MEDICAL REVIEW: The branch is not spelled out in the guidelines; it follows the project rule "rescuer
+      safety first".
+    instructions:
+      - Nie podchodź do poszkodowanego, dopóki miejsce nie jest bezpieczne. Zadzwoń pod sto dwanaście i słuchaj poleceń dyspozytora.
+    transitions: []
+    sources:
+      - {source: erc-2025-first-aid, section: Expectations of a first aid provider}
+
+  - id: call_emergency
+    actions: [CALL_EMERGENCY]
+    note: >-
+      ERC: call the local emergency number as soon as possible. The speakerphone keeps the
+      rescuer's hands free for the pressure; if the call is not possible the scenario goes straight
+      on and never sends the rescuer away from the person.
+    instructions:
+      - Jeśli ktoś jest z Tobą, poproś, żeby zadzwonił pod dziewięćset dziewięćdziesiąt dziewięć. Jeśli jesteś sam, zadzwoń sam.
+      - Włącz w telefonie tryb głośnomówiący, żeby mieć wolne ręce.
+    transitions:
+      - when: wezwano pomoc (ktoś dzwoni albo rozmówca rozmawia z dyspozytorem)
+        goto: direct_pressure
+      - when: rozmówca nie może zadzwonić (brak zasięgu lub sieci, brak telefonu)
+        goto: direct_pressure
+        interrupt: true
+    sources:
+      - {source: erc-2025-first-aid, section: Expectations of a first aid provider}
+
+  - id: direct_pressure
+    actions: [DIRECT_PRESSURE, APPLY_DRESSING]
+    note: >-
+      NEEDS MEDICAL REVIEW: Direct manual pressure is preferred over pressure points and pressure devices (ILCOR 2025,
+      ERC). The instruction to keep pressing without letting go is the guideline's "firm direct
+      manual pressure" taken to mean continuous pressure; the guideline gives no time limit.
+    instructions:
+      - Mocno uciśnij dłonią ranę, w miejscu krwawienia.
+      - Jeśli masz opatrunek, zwykły albo hemostatyczny, włóż go bezpośrednio w ranę i mocno uciśnij go dłonią od góry.
+      - Nie przestawaj uciskać.
+    asks: Czy krwawienie ustało albo jest pod kontrolą?
+    transitions:
+      - when: krwawienie ustało albo jest pod kontrolą
+        goto: pressure_dressing
+      - when: krwawienie trwa, a rana jest na ręce albo nodze
+        goto: tourniquet_check
+      - when: krwawienie trwa, a rana jest na tułowiu, szyi albo głowie
+        goto: keep_pressing
+    sources:
+      - {source: erc-2025-first-aid, section: Control of life-threatening bleeding}
+
+  - id: pressure_dressing
+    actions: [APPLY_PRESSURE_DRESSING]
+    note: >-
+      NEEDS MEDICAL REVIEW: The guideline says only to apply a pressure dressing once the bleeding is under control and
+      does not describe the technique; the dispatcher guides the rescuer.
+    instructions:
+      - Gdy krwawienie jest pod kontrolą, załóż opatrunek uciskowy. Jeśli nie wiesz, jak go założyć, dalej uciskaj ranę i poproś o pomoc dyspozytora.
+    transitions:
+      - when: opatrunek uciskowy założony
+        goto: after_bleeding
+      - when: krwawienie wróciło
+        goto: direct_pressure
+        interrupt: true
+    sources:
+      - {source: erc-2025-first-aid, section: Control of life-threatening bleeding}
+
+  - id: tourniquet_check
+    note: >-
+      NEEDS MEDICAL REVIEW: "Apply a tourniquet as soon as possible for life-threatening extremity bleeding that is not
+      controlled by direct manual pressure" (ERC) and "only use available equipment you have been
+      trained to use". The ERC prefers manufactured tourniquets (they are simpler to apply and
+      occlude the artery better than improvised ones); improvised tourniquets are not offered.
+     
+    instructions:
+      - Jeśli krwawienie z ręki lub nogi nie ustaje mimo ucisku, potrzebna jest opaska uciskowa, czyli staż.
+    asks: Czy masz fabryczną opaskę uciskową i wiesz, jak jej użyć?
+    transitions:
+      - when: tak, ma opaskę i potrafi jej użyć
+        goto: tourniquet
+      - when: nie ma opaski albo nie wie, jak jej użyć
+        goto: keep_pressing
+    sources:
+      - {source: erc-2025-first-aid, section: Control of life-threatening bleeding}
+      - {source: erc-2025-first-aid, section: Expectations of a first aid provider}
+
+  - id: tourniquet
+    actions: [APPLY_TOURNIQUET, NOTE_TOURNIQUET_TIME]
+    note: >-
+      From the ERC text: place the tourniquet around the limb 5–7 cm above the injury, not over a
+      joint; tighten until the bleeding slows and stops (this may be painful); write the time of
+      application on the device; do not release it (only a healthcare professional should); in
+      some cases a second tourniquet above the first is needed.
+    instructions:
+      - Załóż opaskę na kończynę, około pięciu do siedmiu centymetrów powyżej rany, ale nie na stawie.
+      - Zaciągaj opaskę, aż krwawienie zwolni i ustanie. Może to być bolesne dla poszkodowanego.
+      - Zapisz na opasce godzinę jej założenia.
+      - Nie zdejmuj ani nie poluzowuj opaski. Może to zrobić tylko pracownik ochrony zdrowia.
+      - Jeśli krwawienie nie ustaje, załóż drugą opaskę powyżej pierwszej.
+    asks: Czy krwawienie ustało albo wyraźnie zwolniło?
+    transitions:
+      - when: krwawienie ustało albo wyraźnie zwolniło
+        goto: after_bleeding
+      - when: krwawienie trwa mimo opaski
+        goto: keep_pressing
+    sources:
+      - {source: erc-2025-first-aid, section: Control of life-threatening bleeding}
+
+  - id: keep_pressing
+    actions: [DIRECT_PRESSURE]
+    instructions:
+      - Dalej mocno uciskaj ranę i nie puszczaj. Słuchaj poleceń dyspozytora.
+    transitions:
+      - when: krwawienie ustało albo jest pod kontrolą
+        goto: pressure_dressing
+      - when: poszkodowany przestał reagować
+        handoff: adult-bls/check_response
+        interrupt: true
+    sources:
+      - {source: erc-2025-first-aid, section: Control of life-threatening bleeding}
+
+  - id: after_bleeding
+    note: >-
+      NEEDS MEDICAL REVIEW: The closing advice follows the project safety rules and the ABCDE framework (reassess for
+      deterioration or loss of responsiveness); it is not a step of the bleeding algorithm.
+    instructions:
+      - Dobrze. Zostań z poszkodowanym, obserwuj go i słuchaj poleceń dyspozytora. Jeśli krwawienie wróci, ponownie mocno uciśnij ranę.
+    transitions:
+      - when: krwawienie wróciło
+        goto: direct_pressure
+        interrupt: true
+      - when: poszkodowany przestał reagować
+        handoff: adult-bls/check_response
+        interrupt: true
+    sources:
+      - {source: erc-2025-first-aid, section: Control of life-threatening bleeding}
+      - {source: erc-2025-first-aid, section: "Structured first aid assessment of a person appearing ill, injured or in shock (ABCDE)"}

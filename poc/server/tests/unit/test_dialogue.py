@@ -87,7 +87,7 @@ async def test_instructions_inside_a_step_come_one_per_turn_without_calling_the_
     second = await turn(dialogue)
     third = await turn(dialogue)
 
-    assert "poproś, żeby zadzwonił pod sto dwanaście" in first
+    assert "poproś, żeby zadzwonił pod dziewięćset dziewięćdziesiąt dziewięć" in first
     assert "tryb głośnomówiący" in second
     assert "zostań z poszkodowanym" in third
     assert len(llm.calls) == calls_so_far
@@ -126,13 +126,18 @@ async def test_an_interrupted_answer_is_said_again() -> None:
 
 
 async def test_choking_that_ends_in_unconsciousness_continues_as_cpr() -> None:
-    # recognise -> encourage_cough -> back_blows -> abdominal_thrusts -> call_and_alternate
-    # (three instructions) -> unresponsive -> hand-off to adult-bls/chest_compressions
+    # recognise -> encourage_cough (two instructions) -> back_blows (two) -> abdominal_thrusts
+    # (three) -> call_and_alternate (three) -> unresponsive -> hand-off to
+    # adult-bls/chest_compressions
     dialogue, _ = make([CHOKING, "1", "3", "2", "2", "2", "1"])
     await turn(dialogue, "Dławi się")  # recognise
     await turn(dialogue, "Tak")  # encourage_cough
+    await turn(dialogue)
     await turn(dialogue, "Nie kaszle")  # back_blows
+    await turn(dialogue)
     await turn(dialogue, "Nie pomogło")  # abdominal_thrusts
+    await turn(dialogue)
+    await turn(dialogue)
     await turn(dialogue, "Nie pomogło")  # call_and_alternate
     await turn(dialogue)
     await turn(dialogue)
@@ -147,6 +152,7 @@ async def test_a_finished_scenario_gives_no_new_steps() -> None:
     dialogue, llm = make([CHOKING, "1", "2"])
     await turn(dialogue, "Dławi się")  # recognise
     await turn(dialogue, "Tak")  # encourage_cough
+    await turn(dialogue)
     await turn(dialogue, "Wypluł")  # relieved, its only instruction
     calls = len(llm.calls)
 
@@ -210,7 +216,7 @@ async def test_a_question_outside_the_procedure_is_answered_without_moving_on() 
 
     assert "Tego nie wiem, zapytaj dyspozytora" in answer
     assert "Ostatnie polecenie" in answer
-    assert "poproś, żeby zadzwonił pod sto dwanaście" in answer  # reminds the last instruction
+    assert "poproś, żeby zadzwonił pod dziewięćset dziewięćdziesiąt dziewięć" in answer  # reminds the last instruction
     assert "tryb głośnomówiący" in after  # the instruction was not skipped
 
 

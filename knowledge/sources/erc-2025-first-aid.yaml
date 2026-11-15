@@ -1,0 +1,28 @@
+# Description of a source document. The original PDF lives in knowledge/raw/ (not in git).
+# `sections` are the headings that steps may cite (`section: "<heading>"` or
+# `"<heading> – <detail>"`).
+id: erc-2025-first-aid
+title: European Resuscitation Council Guidelines 2025 – First Aid
+publisher: European Resuscitation Council (ERC)
+version: ERC Guidelines 2025
+published: "2025"
+reference: Resuscitation 215 (2025) 110752
+urls:
+  - https://doi.org/10.1016/j.resuscitation.2025.110752
+accessed: 2026-11-15
+scope: [layperson]
+raw:
+  - European-Resuscitation-Council-Guidelines-2025-Fir.pdf
+sections:
+  - Expectations of a first aid provider
+  - Structured first aid assessment of a person appearing ill, injured or in shock (ABCDE)
+  - Recovery position
+  - Choking in an adult person
+  - Choking
+  - Cervical spinal motion restriction
+  - Control of life-threatening bleeding
+notes: >-
+  Two headings share a topic: the short "concise guidelines" entry (e.g. "Choking in an adult
+  person") and the longer evidence section ("Choking", "Recovery position", "Control of
+  life-threatening bleeding"). The figures (Fig. 3 recovery position, Fig. 5 choking, Fig. 9
+  bleeding) are drawings; the text of the guideline describes the same steps.

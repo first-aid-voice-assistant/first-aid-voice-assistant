@@ -1,0 +1,95 @@
+# Recovery position for an adult who is unresponsive but breathing normally, for a layperson.
+# Based only on the ERC Guidelines 2025 First Aid ("Recovery position", Fig. 3). The guideline:
+# use the lateral (side-lying) recovery position for a person with a decreased level of
+# responsiveness who does NOT meet the criteria for CPR; do NOT use it in agonal breathing or
+# after trauma; monitor breathing regularly and, if it deteriorates, lay the person on the back
+# and start CPR. Wording is Polish and meant to be read aloud (numbers in words); ids, structure
+# and comments are English. No pictures yet (the app has none for this scenario).
+id: adult-recovery-position
+title: Pozycja boczna bezpieczna osoby nieprzytomnej, która oddycha
+trigger: >-
+  Dorosły poszkodowany nie reaguje (jest nieprzytomny), ale oddycha prawidłowo, i nie ma
+  podejrzenia urazu.
+level: layperson
+start: check_trauma
+
+steps:
+  - id: check_trauma
+    note: >-
+      The guideline excludes people with trauma and agonal breathing. Breathing was already
+      assessed in adult-bls; when this scenario is chosen directly, the trigger says the person
+      breathes normally, and the `interrupt` branches send the rescuer back to the breathing check
+      if that changes.
+    instructions:
+      - Zanim ułożysz poszkodowanego na boku, upewnij się, że nie doznał urazu.
+    asks: Czy poszkodowany upadł z wysokości, uczestniczył w wypadku, został przygnieciony albo miał inny poważny uraz?
+    transitions:
+      - when: tak, podejrzewasz uraz (upadek z wysokości, wypadek komunikacyjny lub sportowy, przygniecenie)
+        goto: trauma_keep_still
+      - when: nie, nie ma podejrzenia urazu
+        goto: roll_to_side
+      - when: poszkodowany przestał oddychać prawidłowo
+        handoff: adult-bls/check_breathing
+        interrupt: true
+    sources:
+      - {source: erc-2025-first-aid, section: Recovery position}
+      - {source: erc-2025-first-aid, section: Cervical spinal motion restriction}
+
+  - id: trauma_keep_still
+    actions: [STABILISE_HEAD_NECK, CHECK_BREATHING]
+    note: >-
+      NEEDS MEDICAL REVIEW: ERC: persons with known trauma are kept supine; suspect a cervical spine injury after a fall
+      or dive from a height, crushing, a road traffic or a sporting accident. Manual stabilisation
+      (head squeeze) is described in the guideline; the jaw thrust and rolling of a person who
+      lies face-down are left out on purpose (they need training).
+    instructions:
+      - Nie zmieniaj pozycji poszkodowanego, chyba że zagraża mu niebezpieczeństwo. Po urazie powinien leżeć na plecach.
+      - Uklęknij za głową poszkodowanego i oprzyj łokcie na ziemi lub na kolanach. Delikatnie przytrzymaj jego głowę dłońmi po bokach, tak żeby kciuki były powyżej uszu, a pozostałe palce poniżej. Nie zakrywaj uszu.
+      - Cały czas obserwuj oddech. Zadzwoń pod dziewięćset dziewięćdziesiąt dziewięć, jeśli jeszcze tego nie zrobiono, i słuchaj poleceń dyspozytora.
+    transitions:
+      - when: poszkodowany przestał oddychać prawidłowo albo oddycha nieprawidłowo
+        handoff: adult-bls/check_breathing
+    sources:
+      - {source: erc-2025-first-aid, section: Recovery position}
+      - {source: erc-2025-first-aid, section: Cervical spinal motion restriction}
+
+  - id: roll_to_side
+    actions: [ROLL_TO_RECOVERY_POSITION]
+    note: >-
+      The steps follow the text of the guideline for the recovery position, with the arm either
+      straight or bent (both are allowed). The guideline adds: where the rescuer is much smaller
+      than the person, positioning the knee first may reduce the reach; this is left out here.
+    instructions:
+      - Uklęknij obok poszkodowanego i upewnij się, że jego nogi są wyprostowane.
+      - Rękę leżącą bliżej Ciebie odłóż na bok pod kątem prostym do ciała. Może być wyprostowana albo zgięta w łokciu.
+      - Drugą rękę poszkodowanego, tę dalszą od Ciebie, przełóż przez jego klatkę piersiową i przyłóż wierzchem dłoni do jego policzka po Twojej stronie.
+      - Drugą dłonią chwyć dalszą nogę tuż nad kolanem i delikatnie unieś ją, zginając w kolanie, ze stopą opartą na podłodze.
+      - Dłoń poszkodowanego trzymaj przy policzku. Pociągnij zgiętą nogę do siebie i ostrożnie obróć poszkodowanego na bok, w swoją stronę.
+      - Ułóż górną nogę tak, żeby biodro i kolano były zgięte pod kątem prostym.
+      - Delikatnie odchyl głowę do tyłu, żeby drogi oddechowe pozostały otwarte. W razie potrzeby popraw dłoń pod policzkiem tak, żeby głowa była odchylona i zwrócona w dół na bok, a płyny mogły wypłynąć z ust.
+    asks: Czy poszkodowany leży już na boku?
+    transitions:
+      - when: poszkodowany leży na boku
+        goto: monitor
+      - when: poszkodowany przestał oddychać prawidłowo
+        handoff: adult-bls/check_breathing
+        interrupt: true
+    sources:
+      - {source: erc-2025-first-aid, section: Recovery position}
+
+  - id: monitor
+    actions: [CHECK_BREATHING, CALL_EMERGENCY]
+    note: >-
+      NEEDS MEDICAL REVIEW: ERC: check regularly for normal breathing; leave the person only if necessary to seek help;
+      if breathing, responsiveness or the airway deteriorate, lay the person on the back and, if
+      required, start CPR. The reminder to call the ambulance (999) follows the project rule and the ERC 2025
+      advice to call for any unresponsive person.
+    instructions:
+      - Upewnij się, że wezwano pogotowie pod numer dziewięćset dziewięćdziesiąt dziewięć, i słuchaj poleceń dyspozytora.
+      - Regularnie sprawdzaj, czy poszkodowany oddycha prawidłowo. Odchodź od niego tylko wtedy, gdy musisz wezwać pomoc.
+      - Jeśli oddech przestanie być prawidłowy, ułóż poszkodowanego na plecach i zacznij RKO.
+    transitions:
+      - when: poszkodowany przestał oddychać prawidłowo
+        handoff: adult-bls/check_breathing
+    sources:
+      - {source: erc-2025-first-aid, section: Recovery position}
