@@ -37,11 +37,17 @@ steps:
 
   - id: trauma_keep_still
     actions: [STABILISE_HEAD_NECK, CHECK_BREATHING]
-    note: >-
-      NEEDS MEDICAL REVIEW: ERC: persons with known trauma are kept supine; suspect a cervical spine injury after a fall
-      or dive from a height, crushing, a road traffic or a sporting accident. Manual stabilisation
-      (head squeeze) is described in the guideline; the jaw thrust and rolling of a person who
-      lies face-down are left out on purpose (they need training).
+    note: |-
+      NEEDS MEDICAL REVIEW:
+      UNCERTAIN: What a layperson does with a person who may have a spine injury: do not move
+        them, support the head (head squeeze), watch the breathing, call; the jaw thrust and
+        rolling a person who lies face-down are left out.
+      WHY: ERC says not to use the recovery position after trauma and describes head and trapezius
+        squeeze, but it does not say how a layperson should keep the airway open when the person
+        lies on the back and the airway is at risk (vomiting, blocked airway). Leaving the person
+        supine without airway care may be unsafe; rolling may harm the spine. Whether trauma is
+        present is decided only by the caller's answer.
+      ERC: Recovery position; Cervical spinal motion restriction.
     instructions:
       - Nie zmieniaj pozycji poszkodowanego, chyba że zagraża mu niebezpieczeństwo. Po urazie powinien leżeć na plecach.
       - Uklęknij za głową poszkodowanego i oprzyj łokcie na ziemi lub na kolanach. Delikatnie przytrzymaj jego głowę dłońmi po bokach, tak żeby kciuki były powyżej uszu, a pozostałe palce poniżej. Nie zakrywaj uszu.
@@ -79,11 +85,15 @@ steps:
 
   - id: monitor
     actions: [CHECK_BREATHING, CALL_EMERGENCY]
-    note: >-
-      NEEDS MEDICAL REVIEW: ERC: check regularly for normal breathing; leave the person only if necessary to seek help;
-      if breathing, responsiveness or the airway deteriorate, lay the person on the back and, if
-      required, start CPR. The reminder to call the ambulance (999) follows the project rule and the ERC 2025
-      advice to call for any unresponsive person.
+    note: |-
+      NEEDS MEDICAL REVIEW:
+      UNCERTAIN: The reminder to make sure the ambulance was called, and 'check breathing
+        regularly' without an interval.
+      WHY: ERC 2025 says to call for any unresponsive person, which usually already happened in
+        adult-bls, but this scenario can also start on its own. The guideline says to check
+        'regularly' and gives no interval, so none is given here either.
+      ERC: Recovery position: monitor the airway, breathing and responsiveness; if they
+        deteriorate lay the person on the back and, if required, start CPR.
     instructions:
       - Upewnij się, że wezwano pogotowie pod numer dziewięćset dziewięćdziesiąt dziewięć, i słuchaj poleceń dyspozytora.
       - Regularnie sprawdzaj, czy poszkodowany oddycha prawidłowo. Odchodź od niego tylko wtedy, gdy musisz wezwać pomoc.

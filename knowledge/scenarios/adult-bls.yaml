@@ -34,9 +34,14 @@ steps:
 
   - id: unsafe
     media: cpr/keep-away
-    note: >-
-      NEEDS MEDICAL REVIEW: The branch is not spelled out in the guidelines; it follows the project rule "rescuer
-      safety first".
+    note: |-
+      NEEDS MEDICAL REVIEW:
+      UNCERTAIN: Whether 'stay away and call 112' is the right instruction for every unsafe scene.
+      WHY: The guideline only says to ensure the safety of the rescuer, the person and bystanders;
+        this branch is not spelled out. It follows the project rule 'rescuer safety first'. 112
+        (not 999) is used because the danger may need the fire brigade or the police.
+      ERC: Safety: 'Ensure the safety of yourself, the person in cardiac arrest, and any
+        bystanders.'
     instructions:
       - Nie podchodź do poszkodowanego, dopóki miejsce nie jest bezpieczne. Zadzwoń pod sto dwanaście i słuchaj poleceń dyspozytora.
     transitions: []
@@ -59,10 +64,14 @@ steps:
 
   - id: responsive
     media: cpr/stay-observe
-    note: >-
-      NEEDS MEDICAL REVIEW: The BLS algorithm applies to people who do not respond. The advice here follows the general
-      principle of the First Aid guideline (always call for help); it does not replace the ABCDE
-      assessment, which is outside this scenario.
+    note: |-
+      NEEDS MEDICAL REVIEW:
+      UNCERTAIN: The advice for a person who does respond: stay, observe, call if in doubt or if
+        worse.
+      WHY: The BLS algorithm covers only people who do not respond. The ABCDE assessment of a
+        responsive person (First Aid guideline) is outside this scenario, so this is a minimal
+        safe default taken from the general principle 'always call for help'.
+      ERC: Expectations of a first aid provider: call for help as a general principle.
     instructions:
       - Poszkodowany reaguje, więc to nie jest sytuacja do RKO. Zostań przy nim i go obserwuj. Jeśli masz jakiekolwiek wątpliwości albo jego stan się pogarsza, zadzwoń pod dziewięćset dziewięćdziesiąt dziewięć.
     transitions: []
@@ -71,12 +80,17 @@ steps:
 
   - id: call_emergency
     actions: [CALL_EMERGENCY]
-    note: >-
-      NEEDS MEDICAL REVIEW: If the rescuer cannot call (no signal, no phone), the scenario goes straight on to the
-      breathing check and CPR and never sends the rescuer away from the person. ERC 2025
-      ("Alerting the emergency services") would have a lone rescuer shout for help and, if no one
-      comes, leave the person to call; the project deliberately does not give that instruction.
-     
+    note: |-
+      NEEDS MEDICAL REVIEW:
+      UNCERTAIN: What to do when the caller cannot phone (no signal, no phone): the scenario goes
+        straight to the breathing check and CPR and never sends the rescuer away.
+      WHY: ERC lets a lone rescuer shout for help and, if no one comes, leave the person to call
+        for help 'as quickly as possible'. The project deliberately omits that instruction (it
+        never sends the rescuer away). The ERC itself says there is no evidence on how long to
+        continue CPR before leaving. A reviewer should decide whether to add 'shout for help' and
+        a 'leave to call' rule.
+      ERC: Alerting the emergency services (call first for any unresponsive person, speaker mode,
+        assess breathing while the call is answered).
     instructions:
       - text: Jeśli ktoś jest z Tobą, poproś, żeby zadzwonił pod dziewięćset dziewięćdziesiąt dziewięć. Jeśli jesteś sam, zadzwoń sam.
         media: cpr/call-112
@@ -170,11 +184,15 @@ steps:
 
   - id: send_for_aed
     actions: [SEND_FOR_AED]
-    note: >-
-      NEEDS MEDICAL REVIEW: ERC 2025: CPR must not be delayed to find an AED; the dispatcher guides bystanders to the
-      nearest AED only when more than one is present. A lone rescuer is therefore told to keep
-      compressing. Asked here (once) so that the loop of 30:2 does not
-      repeat it.
+    note: |-
+      NEEDS MEDICAL REVIEW:
+      UNCERTAIN: A lone rescuer is told to keep compressing and not to look for the AED; with a
+        helper present the helper is asked to bring it.
+      WHY: ERC: CPR must not be delayed to get an AED, and the dispatcher guides bystanders to an
+        AED only when more than one is present. Whether a lone rescuer should fetch an AED that is
+        visibly very close is not addressed. The question is asked here (once) only so that the
+        30:2 loop does not repeat it; that is a design choice, not a guideline step.
+      ERC: Role of the dispatcher; Using an automated external defibrillator (AED).
     instructions:
       - text: Jeśli ktoś jest z Tobą, poproś, żeby przyniósł AED, czyli defibrylator, jeśli jest w pobliżu.
         media: cpr/aed
@@ -208,10 +226,17 @@ steps:
         interrupt: true
       - when: ratownik albo dyspozytor każe przestać, poszkodowany w oczywisty sposób odzyskuje przytomność (porusza się, otwiera oczy, prawidłowo oddycha) albo rozmówca jest zbyt zmęczony
         goto: end_cpr
-    note: >-
-      NEEDS MEDICAL REVIEW: "Compression-only CPR" for untrained rescuers is from ERC 2025 (Compression-only CPR). The
-      ERC says to continue until professional help takes over or tells you to stop; the signs of
-      recovery and the exhaustion exit are not in the ERC text and need medical review.
+    note: |-
+      NEEDS MEDICAL REVIEW:
+      UNCERTAIN: The conditions for stopping CPR: (1) obvious signs of recovery (moves, opens
+        eyes, breathes normally), (2) the rescuer is too exhausted, (3) a rescuer or dispatcher
+        tells to stop.
+      WHY: ERC First Aid says only 'continue CPR until professional help arrives and takes over or
+        tells you to stop'. (1) and (2) come from the earlier draft and are not in the ERC text:
+        stopping on a layperson's own judgement of recovery may stop too early, and exhaustion has
+        no guideline basis. Decide whether to keep, reword or remove them.
+      ERC: Expectations of a first aid provider; Rescue breaths (compression-only CPR for
+        untrained rescuers).
     sources:
       - {source: erc-2025-bls, section: High quality chest compressions}
       - {source: erc-2025-bls, section: Rescue breaths}
@@ -235,20 +260,27 @@ steps:
         interrupt: true
       - when: ratownik albo dyspozytor każe przestać, poszkodowany w oczywisty sposób odzyskuje przytomność (porusza się, otwiera oczy, prawidłowo oddycha) albo rozmówca jest zbyt zmęczony
         goto: end_cpr
-    note: >-
-      NEEDS MEDICAL REVIEW: See `compressions_only` for the exit conditions.
+    note: |-
+      NEEDS MEDICAL REVIEW:
+      UNCERTAIN: The same stopping conditions as in `compressions_only`.
+      WHY: See `compressions_only`: only 'professional help takes over or tells you to stop' is in
+        the ERC text; signs of recovery and exhaustion are additions of this project.
+      ERC: Rescue breaths (30:2 for rescuers who are trained, able and willing).
     sources:
       - {source: erc-2025-bls, section: Rescue breaths}
       - {source: erc-2025-bls, section: Concise resuscitation guidelines for all responders}
 
   - id: rescue_breaths
     actions: [OPEN_AIRWAY, RESCUE_BREATHS]
-    note: >-
-      NEEDS MEDICAL REVIEW: The ERC text gives: just enough air for the chest to start to rise, about one second per
-      breath, interruption of compressions for two breaths no longer than ten seconds, and
-      foreign body airway obstruction to be considered after two failed attempts. The grip
-      (pinching the nose, sealing the mouth) is shown in the ERC BLS figures, not in the text;
-      check it against them before use.
+    note: |-
+      NEEDS MEDICAL REVIEW:
+      UNCERTAIN: The grip for rescue breaths: pinch the nose, let the mouth open, keep the chin
+        lifted, seal the mouth over the person's mouth.
+      WHY: The ERC text gives only: enough air for the chest to start to rise, about one second
+        per breath, no more than ten seconds without compressions for two breaths, and to consider
+        foreign body airway obstruction after two failed attempts. The grip is shown in ERC BLS
+        figures (not in the text) and was not checked against them.
+      ERC: Rescue breaths.
     instructions:
       - text: Ponownie udrożnij drogi oddechowe, odginając głowę do tyłu i unosząc brodę.
         media: cpr/head-tilt
@@ -274,11 +306,15 @@ steps:
 
   - id: aed_attach
     actions: [AED_ATTACH]
-    note: >-
-      NEEDS MEDICAL REVIEW: From the ERC text: use the AED as soon as it is available, follow its prompts, attach the
-      pads to the bare chest where the device or the pads show, and if more than one rescuer is
-      present continue CPR while the pads are attached. What a lone rescuer does (pauses
-      compressions only to attach the pads) is an inference from that sentence. Pad positions are shown in the ERC figures (Fig. 6) and on the device.
+    note: |-
+      NEEDS MEDICAL REVIEW:
+      UNCERTAIN: What a lone rescuer does: pauses compressions only for the time of attaching the
+        pads.
+      WHY: ERC says only that if more than one rescuer is present one continues CPR while the
+        other attaches the pads; the lone-rescuer case is an inference from that sentence. Pad
+        positions are not described in the text (they are on the device and in ERC Fig. 6).
+      ERC: Using an automated external defibrillator (AED): use it as soon as it is available,
+        follow its prompts, attach the pads to the bare chest.
     instructions:
       - text: Włącz AED. Niektóre urządzenia włączają się same po otwarciu pokrywy, a w innych trzeba nacisnąć przycisk zasilania.
         media: cpr/aed
@@ -344,10 +380,13 @@ steps:
 
   - id: end_cpr
     media: cpr/stay-observe
-    note: >-
-      NEEDS MEDICAL REVIEW: Only the condition "professional help takes over or tells you to stop" comes from the
-      guideline; the closing sentence about staying with the person follows the project safety
-      rules.
+    note: |-
+      NEEDS MEDICAL REVIEW:
+      UNCERTAIN: The closing instruction to stay with the person and follow the dispatcher or the
+        rescue team.
+      WHY: It is not a guideline step. Only the condition 'professional help takes over or tells
+        you to stop' comes from ERC; the rest follows the project safety rules.
+      ERC: Expectations of a first aid provider.
     instructions:
       - Dobrze. Zostań przy poszkodowanym i słuchaj poleceń dyspozytora lub zespołu ratunkowego.
     transitions: []

@@ -33,7 +33,7 @@ A scenario has `id`, `title`, `trigger` (when to choose it), `level`, `start` an
 - `actions` – codes from `actions.yaml` the rescuer may perform in this step;
 - `transitions` – `when` (a condition, in Polish) and `goto` (a step) or `handoff` (`scenario/step`); an optional `interrupt: true` marks a branch for an obstacle (e.g. no phone signal) that may be taken in the middle of a step, before all its instructions were said; other transitions wait until the step is done; a step without transitions ends the scenario;
 - `sources` – optional citations, see below;
-- `note` – where the step goes beyond the guideline, for reviewers. A note that needs a medical reviewer's decision starts with `NEEDS MEDICAL REVIEW:` (the same marker opens the comments at the top of a file); list them all with `grep -rn "NEEDS MEDICAL REVIEW" knowledge/scenarios`.
+- `note` – where the step goes beyond the guideline, for reviewers. A note that needs a medical reviewer's decision starts with `NEEDS MEDICAL REVIEW:` and has the labelled parts `UNCERTAIN:` (what exactly), `WHY:` (why it is uncertain) and `ERC:` (what the guideline does say); the same marker opens the comments at the top of a file; list them all with `grep -rn "NEEDS MEDICAL REVIEW" knowledge/scenarios`.
 
 The server (`poc/server/app/knowledge/`) validates the files at start-up and refuses to start when a transition, action or (if source files are present) citation does not exist, a step is unreachable, or a scenario with pictures has an instruction without one. It walks through a scenario one instruction at a time and shows the model only the current one.
 

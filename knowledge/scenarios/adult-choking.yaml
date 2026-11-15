@@ -3,11 +3,12 @@
 # thrusts, then the two alternating; CPR when the person becomes unresponsive. Wording is Polish
 # and meant to be read aloud (numbers in words); ids, structure and comments are English.
 #
-# NEEDS MEDICAL REVIEW: the guideline lists the call to the emergency number after the first round of
-# back blows and abdominal thrusts, and this scenario follows that order. The project safety rule
-# is to call first at any threat to life, so `encourage_cough` also asks anyone nearby to call at
-# once; the rescuer who is alone calls in `call_and_alternate`. Decide with a medical reviewer
-# whether a lone rescuer should call earlier.
+# NEEDS MEDICAL REVIEW:
+# UNCERTAIN: when the emergency call is made. This scenario follows the ERC order (call
+#   after the first round of five back blows and five abdominal thrusts) and asks anyone
+#   nearby to call at once; a rescuer who is alone calls in `call_and_alternate`.
+# WHY: the project safety rule is 'call first at any threat to life', the guideline
+#   lists the call later and says it has no data on a choking person who is alone.
 id: adult-choking
 title: Zadławienie osoby dorosłej
 trigger: >-
@@ -28,11 +29,15 @@ steps:
 
   - id: encourage_cough
     actions: [ENCOURAGE_COUGH]
-    note: >-
-      NEEDS MEDICAL REVIEW: ERC: a person who is awake and able to cough should be encouraged to do so; back blows and
-      thrusts are for those who cannot cough or speak. The request to anyone nearby to call the ambulance (999) is
-      not in the guideline's order of steps; it follows the project rule and the general
-      principle "call your local emergency number as soon as possible".
+    note: |-
+      NEEDS MEDICAL REVIEW:
+      UNCERTAIN: Asking anyone nearby to call 112 right away, while a rescuer who is alone calls
+        only after the first round of back blows and abdominal thrusts.
+      WHY: ERC lists the call after the first round of blows and thrusts, and has no data on a
+        choking person who is alone. The request to a bystander is not in the guideline's order;
+        it follows the project rule 'call first' and the principle 'call as soon as possible'.
+        Decide whether a lone rescuer should call earlier.
+      ERC: Choking in an adult person; Choking (treatment of the awake, responsive person).
     instructions:
       - Zachęcaj poszkodowanego do kaszlu.
       - Jeśli ktoś jest obok, poproś, żeby zadzwonił pod dziewięćset dziewięćdziesiąt dziewięć.
