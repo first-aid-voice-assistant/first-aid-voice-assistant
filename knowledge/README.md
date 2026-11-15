@@ -20,8 +20,10 @@ Vetted first-aid and emergency-medicine knowledge that the assistant relies on. 
 | File | Content |
 |---|---|
 | `actions.yaml` | Actions: `code` (e.g. `CHEST_COMPRESSIONS`), Polish `name`, `level`, colloquial `synonyms` |
-| `adult-bls.yaml` | Adult cardiac arrest: check safety and response, call 112, check breathing, compressions, rescue breaths 30:2 for trained rescuers |
+| `adult-bls.yaml` | Adult cardiac arrest: check safety and response, call 999, check breathing, compressions, rescue breaths 30:2 for trained rescuers, AED; hands an unresponsive person who breathes normally to the recovery position |
 | `adult-choking.yaml` | Adult choking: cough, 5 back blows, 5 abdominal thrusts, alternating, CPR when the person becomes unresponsive |
+| `adult-recovery-position.yaml` | Unresponsive adult who breathes normally: exclusion of trauma, recovery position step by step, monitoring of breathing |
+| `adult-severe-bleeding.yaml` | Life-threatening external bleeding: call 999, direct pressure, dressing, pressure dressing, tourniquet for limbs when pressure fails |
 
 A scenario has `id`, `title`, `trigger` (when to choose it), `level`, `start` and a list of `steps`. A step has:
 
@@ -31,7 +33,7 @@ A scenario has `id`, `title`, `trigger` (when to choose it), `level`, `start` an
 - `actions` – codes from `actions.yaml` the rescuer may perform in this step;
 - `transitions` – `when` (a condition, in Polish) and `goto` (a step) or `handoff` (`scenario/step`); an optional `interrupt: true` marks a branch for an obstacle (e.g. no phone signal) that may be taken in the middle of a step, before all its instructions were said; other transitions wait until the step is done; a step without transitions ends the scenario;
 - `sources` – optional citations, see below;
-- `note` – where the step goes beyond the guideline, for reviewers.
+- `note` – where the step goes beyond the guideline, for reviewers. A note that needs a medical reviewer's decision starts with `NEEDS MEDICAL REVIEW:` (the same marker opens the comments at the top of a file); list them all with `grep -rn "NEEDS MEDICAL REVIEW" knowledge/scenarios`.
 
 The server (`poc/server/app/knowledge/`) validates the files at start-up and refuses to start when a transition, action or (if source files are present) citation does not exist, a step is unreachable, or a scenario with pictures has an instruction without one. It walks through a scenario one instruction at a time and shows the model only the current one.
 
@@ -41,4 +43,4 @@ A source file has `id`, `title`, `publisher`, `version`, `published`, `urls`, `a
 
 ## Status
 
-Two draft scenarios (adult BLS, adult choking; AED steps are left out for now) based on the ERC 2025 guidelines and materials of the Polish Resuscitation Council (PRR). Their citations name those documents, but the `sources/` descriptions are not added yet – they come when the procedures are completed. **Not yet reviewed by a medical professional**; the points to check are in the `note` fields and in the comment at the top of `adult-choking.yaml` (the guideline calls the emergency number only after the first round of back blows and abdominal thrusts; the project rule is to call first).
+Four draft scenarios (adult BLS with AED, adult choking, recovery position, severe bleeding) based **only** on the ERC Guidelines 2025 (Adult Basic Life Support and First Aid, described in `sources/`; the PDFs are in `raw/`). The citations are validated against `sources/`. **Not yet reviewed by a medical professional**; the points to check are in the `note` fields and in the comments at the top of the files, in particular: choking calls the ambulance (999) after the first round, as the ERC does (the project rule is to call first, so anyone nearby is asked to call at once); the tourniquet is offered only to a caller who has a manufactured one and knows how to use it; what a lone rescuer does with the AED and with no phone signal is an inference. The pictures of `adult-bls` come from an earlier set; `cpr/aed` has no drawing in the app yet. Out of scope for now: children, other first-aid topics of the ERC First Aid guideline (e.g. open chest wounds, amputated body part).

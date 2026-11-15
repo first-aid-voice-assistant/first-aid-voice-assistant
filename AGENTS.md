@@ -16,7 +16,8 @@ Overview, requirements and architecture: `docs/project/`.
 ## Domain and safety
 
 - The assistant must never be the only way to get help: every client shows a "call 112" fallback when the backend is unreachable or returns an error.
-- Safety rules live in the system prompts (call 112 first, rescuer safety first, no diagnoses, no drug dosing, never invent procedures, one short instruction at a time). Do not weaken or remove them; any prompt change must be re-checked against them and, ideally, reviewed by a medical professional.
+- **Emergency numbers (decided 2026-11-15, for Poland):** when an ambulance is needed, scenarios and prompts send the user to **999** (it reaches a medical dispatcher directly), spoken as "dziewięćset dziewięćdziesiąt dziewięć". **112** (the general emergency number) stays (a) where the danger may also need the fire brigade or police (e.g. an unsafe scene), (b) where we do not know whom to call ("I don't know, call 112", no procedure matches) and (c) as the fallback in every client (the always-visible call button, the backend-error message). Do not replace the fallback with 999.
+- Safety rules live in the system prompts (call for help first – 999 when an ambulance is needed, otherwise 112 – rescuer safety first, no diagnoses, no drug dosing, never invent procedures, one short instruction at a time). Do not weaken or remove them; any prompt change must be re-checked against them and, ideally, reviewed by a medical professional.
 - The assistant suggests only steps that exist in the knowledge base (`knowledge/`). Medical facts must come from vetted sources, not from the model's memory.
 - The model must not simply agree with the user: it checks what the user says against the scenario and corrects it when needed.
 - Prefer failing loudly over guessing: an honest "I don't know, call 112" beats a confident wrong answer.
