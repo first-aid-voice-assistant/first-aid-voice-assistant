@@ -6,7 +6,9 @@
 # is at the person's side. Wording is Polish and meant to be read aloud (numbers in words); ids,
 # structure and comments are English.
 #
-# `instructions` are given one at a time. A step without `transitions` ends the scenario.
+# `instructions` are given one at a time, one per turn of the conversation, so an item is one thought
+# the rescuer can act on, in at most two short sentences. Gestures that belong together are one item.
+# A step without `transitions` ends the scenario.
 # `media` names the picture the mobile app shows while an instruction is said (per step, or per
 # instruction as `{text, media}`); the pictures are drawings and need the same medical review.
 # NOTE: `cpr/aed` has no drawing in the app yet (it falls back to the generic scene picture).
@@ -94,10 +96,8 @@ steps:
     instructions:
       - text: Jeśli ktoś jest z Tobą, poproś, żeby zadzwonił pod dziewięćset dziewięćdziesiąt dziewięć. Jeśli jesteś sam, zadzwoń sam.
         media: cpr/call-112
-      - text: Włącz w telefonie tryb głośnomówiący, żeby móc zacząć RKO w trakcie rozmowy z dyspozytorem.
+      - text: Włącz w telefonie tryb głośnomówiący, żeby móc zacząć RKO w trakcie rozmowy z dyspozytorem. Jeśli to możliwe, zostań z poszkodowanym.
         media: cpr/speakerphone
-      - text: Jeśli to możliwe, zostań z poszkodowanym.
-        media: cpr/stay-observe
     transitions:
       - when: >-
           wezwano pomoc (ktoś dzwoni, rozmówca rozmawia z dyspozytorem albo czeka, aż dyspozytor
@@ -161,15 +161,11 @@ steps:
       beside the person and the surface of the compressions are shown only in the figures;
       the guideline does not advise moving a person from a soft surface to the floor.
     instructions:
-      - text: Uklęknij obok poszkodowanego.
+      - text: Uklęknij obok poszkodowanego. Jeśli ubranie przeszkadza w znalezieniu mostka, odsłoń klatkę piersiową.
         media: cpr/kneel
-      - text: Jeśli ubranie przeszkadza w znalezieniu mostka, odsłoń klatkę piersiową.
-        media: cpr/hand-position
       - text: Połóż nasadę jednej dłoni na środku klatki piersiowej, czyli na dolnej połowie mostka.
         media: cpr/hand-position
-      - text: Drugą dłoń połóż na pierwszej i spleć palce.
-        media: cpr/hand-position
-      - text: Wyprostuj ramiona i ustaw je pionowo nad klatką piersiową poszkodowanego.
+      - text: Drugą dłoń połóż na pierwszej i spleć palce. Wyprostuj ramiona i ustaw je pionowo nad klatką piersiową poszkodowanego.
         media: cpr/compressions
       - text: Uciskaj mostek na głębokość co najmniej pięciu, ale nie więcej niż sześciu centymetrów, w tempie od stu do stu dwudziestu uciśnięć na minutę.
         media: cpr/compressions
@@ -282,13 +278,9 @@ steps:
         figures (not in the text) and was not checked against them.
       ERC: Rescue breaths.
     instructions:
-      - text: Ponownie udrożnij drogi oddechowe, odginając głowę do tyłu i unosząc brodę.
-        media: cpr/head-tilt
-      - text: Palcem wskazującym i kciukiem ręki, która jest na czole, zaciśnij skrzydełka nosa poszkodowanego.
+      - text: Ponownie udrożnij drogi oddechowe, odginając głowę do tyłu i unosząc brodę. Palcem wskazującym i kciukiem ręki, która jest na czole, zaciśnij skrzydełka nosa poszkodowanego.
         media: cpr/pinch-nose
-      - text: Pozwól, żeby usta poszkodowanego się otworzyły, ale trzymaj brodę uniesioną.
-        media: cpr/pinch-nose
-      - text: Weź normalny wdech i szczelnie obejmij swoimi ustami usta poszkodowanego.
+      - text: Pozwól, żeby usta poszkodowanego się otworzyły, ale trzymaj brodę uniesioną. Weź normalny wdech i szczelnie obejmij swoimi ustami usta poszkodowanego.
         media: cpr/rescue-breath
       - text: Wdmuchuj powietrze jednostajnie, przez około jedną sekundę, obserwując, czy klatka piersiowa się unosi. Wdmuchnij tylko tyle powietrza, żeby klatka zaczęła się unosić.
         media: cpr/rescue-breath

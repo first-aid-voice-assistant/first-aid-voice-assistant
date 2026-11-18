@@ -39,10 +39,7 @@ class ConversationHistory extends StatelessWidget {
   final ConversationViewModel viewModel;
   final ScrollController? controller;
 
-  bool get _showsPartial =>
-      viewModel.partialText.isNotEmpty &&
-      (viewModel.status == ConversationStatus.recording ||
-          viewModel.status == ConversationStatus.transcribing);
+  bool get _showsPartial => viewModel.partialText.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -150,6 +147,7 @@ class _AssistantBubble extends StatelessWidget {
     final failed = answer.state == AnswerState.failed;
     final interrupted = answer.state == AnswerState.interrupted;
     final details = [
+      if (answer.reminder) 'przypomnienie',
       if (answer.firstSoundAfter != null)
         'głos po ${formatSeconds(answer.firstSoundAfter!)}',
       if (answer.firstTokenTime != null)

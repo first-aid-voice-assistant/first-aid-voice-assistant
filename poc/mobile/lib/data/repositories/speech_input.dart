@@ -20,6 +20,8 @@ abstract interface class SpeechInput {
 
   Stream<Utterance> get utterances;
 
+  set muted(bool muted);
+
   Future<void> prepare({void Function(double progress)? onProgress});
 
   Future<bool> hasPermission();
@@ -49,8 +51,39 @@ Duration _samplesToDuration(int samples) => Duration(
   microseconds: samples * Duration.microsecondsPerSecond ~/ _sampleRate,
 );
 
+int _durationToBytes(Duration duration) =>
+    duration.inMicroseconds * _sampleRate ~/ Duration.microsecondsPerSecond * 2;
+
 Duration _notNegative(Duration duration) =>
     duration.isNegative ? Duration.zero : duration;
+
+class _MutedSpans {
+  final List<(int, int)> _spans = [];
+  int? _from;
+
+  void set({required bool muted, required int at}) {
+    if (muted) {
+      _from ??= at;
+      return;
+    }
+    final from = _from;
+    if (from == null) return;
+    _from = null;
+    _spans.add((from, at));
+    if (_spans.length > 8) _spans.removeAt(0);
+  }
+
+  bool overlaps(int start, int end) {
+    final from = _from;
+    if (from != null && end > from) return true;
+    return _spans.any((span) => end > span.$1 && start < span.$2);
+  }
+
+  void clear() {
+    _spans.clear();
+    _from = null;
+  }
+}
 
 class SegmentedSpeechInput implements SpeechInput {
   SegmentedSpeechInput({
@@ -79,6 +112,9 @@ class SegmentedSpeechInput implements SpeechInput {
   DateTime? _startedAt;
   final List<StreamSubscription<Object>> _subscriptions = [];
   Completer<void>? _audioDone;
+  final _MutedSpans _mutedSpans = _MutedSpans();
+  bool _muted = false;
+  int _heard = 0;
 
   @override
   String get label => engine.title;
@@ -88,6 +124,14 @@ class SegmentedSpeechInput implements SpeechInput {
 
   @override
   Stream<Utterance> get utterances => _utterances.stream;
+
+  @override
+  set muted(bool muted) {
+    if (muted == _muted) return;
+    _muted = muted;
+    _mutedSpans.set(muted: muted, at: _heard);
+    if (muted && !_partials.isClosed) _partials.add('');
+  }
 
   @override
   Future<void> prepare({void Function(double progress)? onProgress}) async {
@@ -108,6 +152,9 @@ class SegmentedSpeechInput implements SpeechInput {
   Future<void> start() async {
     if (!_prepared) throw const SpeechInputException('Model is not prepared');
     _segmenter.reset();
+    _heard = 0;
+    _mutedSpans.clear();
+    _mutedSpans.set(muted: _muted, at: 0);
     final pcm = Pcm16Decoder();
     final transcriber = SegmentedTranscriber(
       decode: _decoder.decode,
@@ -118,7 +165,7 @@ class SegmentedSpeechInput implements SpeechInput {
     _subscriptions
       ..add(
         transcriber.partialText.listen(
-          (text) => _partials.add(cleanTranscript(text)),
+          (text) => _partials.add(_muted ? '' : cleanTranscript(text)),
         ),
       )
       ..add(transcriber.segments.listen(_onSegment));
@@ -136,6 +183,8 @@ class SegmentedSpeechInput implements SpeechInput {
         audio.listen(
           (chunk) {
             final samples = pcm.convert(chunk);
+            if (_muted) samples.fillRange(0, samples.length, 0);
+            _heard += samples.length;
             transcriber.addAudio(samples);
             _segmenter.accept(samples).forEach(transcriber.addRegion);
             transcriber.setActiveStart(_segmenter.activeStart);
@@ -179,6 +228,7 @@ class SegmentedSpeechInput implements SpeechInput {
     final startedAt = _startedAt;
     final text = cleanTranscript(segment.text);
     if (startedAt == null || text.isEmpty || _utterances.isClosed) return;
+    if (_mutedSpans.overlaps(segment.region.start, segment.region.end)) return;
     final endedAt = startedAt.add(_samplesToDuration(segment.region.end));
     _utterances.add(
       Utterance(
@@ -243,6 +293,9 @@ class StreamingSpeechInput implements SpeechInput {
   DateTime? _startedAt;
   StreamSubscription<Uint8List>? _audio;
   Completer<void>? _audioDone;
+  final _MutedSpans _mutedSpans = _MutedSpans();
+  bool _muted = false;
+  int _heardBytes = 0;
 
   @override
   String get label => engine.title;
@@ -252,6 +305,14 @@ class StreamingSpeechInput implements SpeechInput {
 
   @override
   Stream<Utterance> get utterances => _utterances.stream;
+
+  @override
+  set muted(bool muted) {
+    if (muted == _muted) return;
+    _muted = muted;
+    _mutedSpans.set(muted: muted, at: _heardBytes);
+    if (muted) _emitPartial('');
+  }
 
   @override
   Future<void> prepare({void Function(double progress)? onProgress}) async {
@@ -273,6 +334,9 @@ class StreamingSpeechInput implements SpeechInput {
     _produced = 0;
     _receivedBytes = 0;
     _resultStartBytes = 0;
+    _heardBytes = 0;
+    _mutedSpans.clear();
+    _mutedSpans.set(muted: _muted, at: 0);
     _queue = Future<void>.value();
     await _recognizer.startSession();
     _active = true;
@@ -287,7 +351,11 @@ class StreamingSpeechInput implements SpeechInput {
       final audio = await _recorder.startStream();
       _startedAt = _now();
       _audio = audio.listen(
-        (chunk) => _enqueue(() => _accept(chunk)),
+        (chunk) {
+          final heard = _muted ? Uint8List(chunk.length) : chunk;
+          _heardBytes += heard.length;
+          _enqueue(() => _accept(heard));
+        },
         onDone: endOfAudio,
         onError: (Object _) => endOfAudio(),
       );
@@ -352,6 +420,12 @@ class StreamingSpeechInput implements SpeechInput {
     if (startedAt == null || text.isEmpty || _utterances.isClosed) return;
     final speechStart = result.start ?? resultStart;
     final speechEnd = result.end ?? received;
+    if (_mutedSpans.overlaps(
+      _durationToBytes(speechStart),
+      _durationToBytes(speechEnd),
+    )) {
+      return;
+    }
     final endedAt = startedAt.add(speechEnd);
     _produced++;
     _utterances.add(
@@ -365,7 +439,8 @@ class StreamingSpeechInput implements SpeechInput {
   }
 
   void _emitPartial(String partial) {
-    if (!_partials.isClosed) _partials.add(cleanTranscript(partial));
+    if (_partials.isClosed) return;
+    _partials.add(_muted ? '' : cleanTranscript(partial));
   }
 
   Future<void> _endSession() async {

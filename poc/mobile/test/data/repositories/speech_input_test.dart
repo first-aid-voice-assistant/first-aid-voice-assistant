@@ -48,6 +48,33 @@ void main() {
       store = FakeModelStore({});
     });
 
+    test(
+      'speech heard while muted is dropped, speech after it is kept',
+      () async {
+        final speech = input();
+        await speech.prepare();
+        final partials = <String>[];
+        final utterances = <Utterance>[];
+        speech.partialText.listen(partials.add);
+        speech.utterances.listen(utterances.add);
+
+        await speech.start();
+        await speak(3);
+        speech.muted = true;
+        await speak(4);
+        expect(partials.last, isEmpty);
+        speech.muted = false;
+        await speak(7);
+        await speech.finish();
+
+        expect(utterances, hasLength(1));
+        expect(
+          utterances.single.endedAt,
+          startedAt.add(const Duration(milliseconds: 1300)),
+        );
+      },
+    );
+
     test('prepare downloads the engine and loads both models', () async {
       final speech = input();
 
@@ -143,6 +170,24 @@ void main() {
       now = startedAt;
       recorder = FakeVoiceRecorder();
       recognizer = FakeStreamingRecognizer(finalChunk: 2);
+    });
+
+    test('results heard while muted are dropped', () async {
+      final speech = input();
+      await speech.prepare();
+      final utterances = <Utterance>[];
+      speech.utterances.listen(utterances.add);
+
+      await speech.start();
+      speech.muted = true;
+      for (var i = 0; i < 2; i++) {
+        recorder.audio.add(chunk());
+        await pumpEventQueue();
+      }
+      speech.muted = false;
+      await speech.finish();
+
+      expect(utterances, isEmpty);
     });
 
     test('prepare loads the unpacked model directory', () async {

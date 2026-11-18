@@ -14,4 +14,6 @@ llm:
       piersiowej.
 rag: { enabled: false }
 knowledge: { enabled: true, path: ../../knowledge }   # scenarios from knowledge/ in the prompt
-prompts: { system: prompts/system_v1.md, knowledge: prompts/scenario_v1.yaml }
+event_log: { enabled: false }   # on only for clients that handle the `action_logged` event
+prompts: { system: prompts/system_v1.md, knowledge: prompts/scenario_v1.yaml,
+           event_log: prompts/event_log_v1.yaml }

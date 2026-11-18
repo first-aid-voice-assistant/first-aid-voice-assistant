@@ -5,11 +5,13 @@ import 'dart:typed_data';
 import 'package:first_aid_voice_assistant/data/repositories/speech_input.dart';
 import 'package:first_aid_voice_assistant/data/repositories/speech_output.dart';
 import 'package:first_aid_voice_assistant/data/services/audio_output.dart';
+import 'package:first_aid_voice_assistant/data/services/beat_clock.dart';
 import 'package:first_aid_voice_assistant/data/services/chat_socket.dart';
 import 'package:first_aid_voice_assistant/data/services/emergency_dialer.dart';
 import 'package:first_aid_voice_assistant/data/services/metronome_sound.dart';
 import 'package:first_aid_voice_assistant/data/services/key_value_store.dart';
 import 'package:first_aid_voice_assistant/data/services/model_store.dart';
+import 'package:first_aid_voice_assistant/data/services/screen_wake.dart';
 import 'package:first_aid_voice_assistant/data/services/segment_decoder.dart';
 import 'package:first_aid_voice_assistant/data/services/speech_segmenter.dart';
 import 'package:first_aid_voice_assistant/data/services/speech_synthesizer.dart';
@@ -35,6 +37,8 @@ class FakeSpeechInput implements SpeechInput {
   List<double> downloadSteps = [];
   bool listening = false;
   int cancelled = 0;
+  @override
+  bool muted = false;
   final StreamController<String> _partials =
       StreamController<String>.broadcast();
   final StreamController<Utterance> _utterances =
@@ -475,4 +479,37 @@ class MemoryStore implements KeyValueStore {
 
   @override
   Future<void> setString(String key, String value) async => values[key] = value;
+}
+
+/// Beat clock that beats only when a test calls [beat].
+class FakeBeatClock implements BeatClock {
+  Duration? period;
+  void Function()? _onBeat;
+
+  @override
+  bool get isRunning => _onBeat != null;
+
+  @override
+  void start(Duration period, void Function() onBeat) {
+    this.period = period;
+    _onBeat = onBeat;
+  }
+
+  @override
+  void stop() {
+    period = null;
+    _onBeat = null;
+  }
+
+  void beat() => _onBeat?.call();
+}
+
+class FakeScreenWake implements ScreenWake {
+  bool on = false;
+
+  @override
+  Future<void> keepOn() async => on = true;
+
+  @override
+  Future<void> release() async => on = false;
 }
