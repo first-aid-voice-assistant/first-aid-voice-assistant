@@ -13,6 +13,13 @@
 # WHY: the guideline says both 'apply a tourniquet as soon as possible for uncontrolled
 #   limb bleeding' and 'only use equipment you have been trained to use', and does not
 #   say what an untrained rescuer should do.
+#
+# NEEDS MEDICAL REVIEW:
+# UNCERTAIN: handing off to the BLS response check from every step of this scenario when the
+#   person stops responding, without saying what to do with the pressure on the wound meanwhile.
+# WHY: ERC 2025 gives the BLS algorithm for a person who does not respond, and the bleeding
+#   guideline does not say how the two combine; the hand-off follows the project rule 'call for
+#   help, then check response and breathing'.
 id: adult-severe-bleeding
 title: Silne krwawienie zewnętrzne u osoby dorosłej
 trigger: >-
@@ -62,7 +69,7 @@ steps:
         goto: direct_pressure
       - when: rozmówca nie może zadzwonić (brak zasięgu lub sieci, brak telefonu)
         goto: direct_pressure
-        interrupt: true
+        obstacle: true
     sources:
       - {source: erc-2025-first-aid, section: Expectations of a first aid provider}
 
@@ -91,6 +98,9 @@ steps:
         goto: tourniquet_check
       - when: krwawienie trwa, a rana jest na tułowiu, szyi albo głowie
         goto: keep_pressing
+      - when: poszkodowany przestał reagować
+        handoff: adult-bls/check_response
+        interrupt: true
     sources:
       - {source: erc-2025-first-aid, section: Control of life-threatening bleeding}
 
@@ -111,6 +121,9 @@ steps:
       - when: krwawienie wróciło
         goto: direct_pressure
         interrupt: true
+      - when: poszkodowany przestał reagować
+        handoff: adult-bls/check_response
+        interrupt: true
     sources:
       - {source: erc-2025-first-aid, section: Control of life-threatening bleeding}
 
@@ -127,13 +140,16 @@ steps:
       ERC: Control of life-threatening bleeding (Tourniquets); Expectations of a first aid
         provider.
     instructions:
-      - Jeśli krwawienie z ręki lub nogi nie ustaje mimo ucisku, potrzebna jest opaska uciskowa, czyli staż.
+      - Jeśli krwawienie z ręki lub nogi nie ustaje mimo ucisku, potrzebna jest opaska uciskowa, czyli staza.
     asks: Czy masz fabryczną opaskę uciskową i wiesz, jak jej użyć?
     transitions:
       - when: tak, ma opaskę i potrafi jej użyć
         goto: tourniquet
       - when: nie ma opaski albo nie wie, jak jej użyć
         goto: keep_pressing
+      - when: poszkodowany przestał reagować
+        handoff: adult-bls/check_response
+        interrupt: true
     sources:
       - {source: erc-2025-first-aid, section: Control of life-threatening bleeding}
       - {source: erc-2025-first-aid, section: Expectations of a first aid provider}
@@ -161,6 +177,9 @@ steps:
         goto: after_bleeding
       - when: krwawienie trwa mimo opaski
         goto: keep_pressing
+      - when: poszkodowany przestał reagować
+        handoff: adult-bls/check_response
+        interrupt: true
     sources:
       - {source: erc-2025-first-aid, section: Control of life-threatening bleeding}
 

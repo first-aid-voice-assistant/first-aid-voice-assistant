@@ -92,9 +92,9 @@ actions:
     synonyms: [zakładam opatrunek uciskowy, bandażuję ranę, zawijam bandażem]
 
   - code: APPLY_TOURNIQUET
-    name: Założenie opaski uciskowej (staży) na kończynę
+    name: Założenie opaski uciskowej (stazy) na kończynę
     level: layperson
-    synonyms: [zakładam opaskę, zakładam staż, zakładam stazę, zaciskam opaskę, opaska uciskowa]
+    synonyms: [zakładam opaskę, zakładam stazę, zaciskam opaskę, opaska uciskowa]
 
   - code: NOTE_TOURNIQUET_TIME
     name: Zapisanie godziny założenia opaski uciskowej

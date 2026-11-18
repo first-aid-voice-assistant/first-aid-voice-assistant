@@ -1,0 +1,34 @@
+# Pozycja boczna: nieprzytomna osoba, która oddycha, bez urazu
+# Uruchomienie (serwer musi działać): uv run python scripts/chat_repl.py --script scripts/dialogues/adult-recovery-position.txt
+# Jedna linia = jedna wypowiedź użytkownika; linie z # są pomijane przez skrypt.
+# Nad każdą wypowiedzią jest komentarz: krok scenariusza i to, co asystent powinien powiedzieć
+# (prawie słowo w słowo; model może skrócić). Wypowiedzi są pisane tak, jak mówi człowiek.
+
+# Oczekiwane: [adult-recovery-position/check_trauma] Zanim ułożysz poszkodowanego na boku, upewnij się, że nie doznał urazu.
+Koleżanka zemdlała na imprezie i nie reaguje, ale oddycha spokojnie i normalnie
+# Oczekiwane: [adult-recovery-position/check_trauma] Czy poszkodowany upadł z wysokości, uczestniczył w wypadku, został przygnieciony albo miał inny poważny uraz?
+Rozumiem
+# Oczekiwane (przejście do adult-recovery-position/roll_to_side): Uklęknij obok poszkodowanego i upewnij się, że jego nogi są wyprostowane.
+Nie, nie spadła z niczego, po prostu zemdlała, żadnego urazu
+# Oczekiwane: [adult-recovery-position/roll_to_side] Rękę leżącą bliżej Ciebie odłóż na bok pod kątem prostym do ciała. Może być wyprostowana albo zgięta w łokciu.
+Uklęknąłem obok, nogi ma proste
+# Oczekiwane: [adult-recovery-position/roll_to_side] Drugą rękę poszkodowanego, tę dalszą od Ciebie, przełóż przez jego klatkę piersiową i przyłóż wierzchem dłoni do jego policzka po Twojej stronie.
+Rękę bliżej mnie odłożyłem na bok
+# Oczekiwane: [adult-recovery-position/roll_to_side] Drugą dłonią chwyć dalszą nogę tuż nad kolanem i delikatnie unieś ją, zginając w kolanie, ze stopą opartą na podłodze.
+Drugą rękę położyłem na jej policzku
+# Oczekiwane: [adult-recovery-position/roll_to_side] Dłoń poszkodowanego trzymaj przy policzku. Pociągnij zgiętą nogę do siebie i ostrożnie obróć poszkodowanego na bok, w swoją stronę.
+Zgiąłem jej dalszą nogę nad kolanem
+# Oczekiwane: [adult-recovery-position/roll_to_side] Ułóż górną nogę tak, żeby biodro i kolano były zgięte pod kątem prostym.
+Obracam ją do siebie
+# Oczekiwane: [adult-recovery-position/roll_to_side] Delikatnie odchyl głowę do tyłu, żeby drogi oddechowe pozostały otwarte. W razie potrzeby popraw dłoń pod policzkiem tak, żeby głowa była odchylona i zwrócona w dół na bok, a płyny mogły wypłynąć z ust.
+Biodro i kolano są pod kątem prostym
+# Oczekiwane: [adult-recovery-position/roll_to_side] Czy poszkodowany leży już na boku?
+Głowa jest odchylona
+# Oczekiwane (przejście do adult-recovery-position/monitor): Upewnij się, że wezwano pogotowie pod numer dziewięćset dziewięćdziesiąt dziewięć, i słuchaj poleceń dyspozytora.
+Tak, leży już na boku
+# Oczekiwane: [adult-recovery-position/monitor] Regularnie sprawdzaj, czy poszkodowany oddycha prawidłowo. Odchodź od niego tylko wtedy, gdy musisz wezwać pomoc.
+Pogotowie jest już wezwane
+# Oczekiwane: [adult-recovery-position/monitor] Jeśli oddech przestanie być prawidłowy, ułóż poszkodowanego na plecach i zacznij RKO.
+Obserwuję jej oddech
+# Oczekiwane (przejście do adult-bls/check_breathing): Ułóż poszkodowanego na plecach.
+Przestała oddychać normalnie, tylko chrapie

@@ -15,7 +15,9 @@ def _build_knowledge(config: AppConfig) -> KnowledgeRuntime | None:
         raise ValueError("knowledge.enabled needs prompts.knowledge (the scenario prompts file)")
     # A broken knowledge base raises here, so the server does not start with wrong procedures.
     return KnowledgeRuntime(
-        load_knowledge(config.knowledge.path), load_scenario_prompts(config.prompts.knowledge)
+        load_knowledge(config.knowledge.path),
+        load_scenario_prompts(config.prompts.knowledge),
+        verbatim=config.knowledge.verbatim,
     )
 
 

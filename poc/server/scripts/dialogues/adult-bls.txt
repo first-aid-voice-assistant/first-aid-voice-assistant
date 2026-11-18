@@ -1,0 +1,94 @@
+# RKO osoby dorosłej: pełna ścieżka dla przeszkolonego ratownika z AED
+# Uruchomienie (serwer musi działać): uv run python scripts/chat_repl.py --script scripts/dialogues/adult-bls.txt
+# Jedna linia = jedna wypowiedź użytkownika; linie z # są pomijane przez skrypt.
+# Nad każdą wypowiedzią jest komentarz: krok scenariusza i to, co asystent powinien powiedzieć
+# (prawie słowo w słowo; model może skrócić). Wypowiedzi są pisane tak, jak mówi człowiek.
+
+# Oczekiwane: [adult-bls/safety] Upewnij się, że Ty, poszkodowany i świadkowie jesteście bezpieczni.
+Pomocy, kolega zasłabł w biurze, leży na podłodze i się nie rusza
+# Oczekiwane (przejście do adult-bls/check_response): Delikatnie potrząśnij poszkodowanego za ramiona i głośno zapytaj, czy wszystko w porządku.
+Tak, jest bezpiecznie
+# Oczekiwane (przejście do adult-bls/call_emergency): Jeśli ktoś jest z Tobą, poproś, żeby zadzwonił pod dziewięćset dziewięćdziesiąt dziewięć. Jeśli jesteś sam, zadzwoń sam.
+Potrząsam go i wołam, ale w ogóle nie reaguje
+# Oczekiwane: [adult-bls/call_emergency] Włącz w telefonie tryb głośnomówiący, żeby móc zacząć RKO w trakcie rozmowy z dyspozytorem.
+Dzwonię
+# Oczekiwane: [adult-bls/call_emergency] Jeśli to możliwe, zostań z poszkodowanym.
+Włączyłem głośnik
+# Oczekiwane (przejście do adult-bls/check_breathing): Ułóż poszkodowanego na plecach.
+Dyspozytor odebrał, rozmawiam z nim
+# Oczekiwane: [adult-bls/check_breathing] Jedną rękę połóż na jego czole, a opuszki palców drugiej pod brodą. Delikatnie odegnij głowę do tyłu i unieś brodę.
+Leży już na plecach
+# Oczekiwane: [adult-bls/check_breathing] Przez nie dłużej niż dziesięć sekund patrz, słuchaj i staraj się wyczuć, czy poszkodowany oddycha.
+Odchyliłem mu głowę
+# Oczekiwane: [adult-bls/check_breathing] Czy poszkodowany oddycha prawidłowo?
+Patrzę i słucham
+# Oczekiwane (przejście do adult-bls/chest_compressions): Uklęknij obok poszkodowanego.
+Nie oddycha, tylko co jakiś czas głośno łapie powietrze
+# Oczekiwane: [adult-bls/chest_compressions] Jeśli ubranie przeszkadza w znalezieniu mostka, odsłoń klatkę piersiową.
+Klęczę obok niego
+# Oczekiwane: [adult-bls/chest_compressions] Połóż nasadę jednej dłoni na środku klatki piersiowej, czyli na dolnej połowie mostka.
+Odsłoniłem mu klatkę piersiową
+# Oczekiwane: [adult-bls/chest_compressions] Drugą dłoń połóż na pierwszej i spleć palce.
+Dłoń leży na środku klatki
+# Oczekiwane: [adult-bls/chest_compressions] Wyprostuj ramiona i ustaw je pionowo nad klatką piersiową poszkodowanego.
+Drugą dłoń położyłem na pierwszej, palce splecione
+# Oczekiwane: [adult-bls/chest_compressions] Uciskaj mostek na głębokość co najmniej pięciu, ale nie więcej niż sześciu centymetrów, w tempie od stu do stu dwudziestu uciśnięć na minutę.
+Ramiona mam proste nad klatką
+# Oczekiwane: [adult-bls/chest_compressions] Po każdym uciśnięciu pozwól klatce piersiowej całkowicie wrócić do pozycji wyjściowej, nie opierając się na niej, ale nie odrywaj dłoni od klatki.
+Uciskam i liczę
+# Oczekiwane (przejście do adult-bls/send_for_aed): Jeśli ktoś jest z Tobą, poproś, żeby przyniósł AED, czyli defibrylator, jeśli jest w pobliżu.
+Zwalniam nacisk po każdym uciśnięciu
+# Oczekiwane: [adult-bls/send_for_aed] Jeśli jesteś sam, nie przerywaj uciśnięć i nie szukaj AED.
+Poprosiłem koleżankę, pobiegła po defibrylator
+# Oczekiwane: [adult-bls/send_for_aed] Czy umiesz wykonywać oddechy ratownicze?
+Rozumiem, uciskam dalej
+# Oczekiwane (przejście do adult-bls/compressions_30_2): Wykonaj trzydzieści uciśnięć klatki piersiowej, tak jak przed chwilą.
+Tak, byłem na kursie i umiem robić oddechy ratownicze
+# Oczekiwane (przejście do adult-bls/rescue_breaths): Ponownie udrożnij drogi oddechowe, odginając głowę do tyłu i unosząc brodę.
+Zrobiłem trzydzieści uciśnięć
+# Oczekiwane: [adult-bls/rescue_breaths] Palcem wskazującym i kciukiem ręki, która jest na czole, zaciśnij skrzydełka nosa poszkodowanego.
+Głowa odchylona, broda uniesiona
+# Oczekiwane: [adult-bls/rescue_breaths] Pozwól, żeby usta poszkodowanego się otworzyły, ale trzymaj brodę uniesioną.
+Zacisnąłem mu nos
+# Oczekiwane: [adult-bls/rescue_breaths] Weź normalny wdech i szczelnie obejmij swoimi ustami usta poszkodowanego.
+Usta się otworzyły
+# Oczekiwane: [adult-bls/rescue_breaths] Wdmuchuj powietrze jednostajnie, przez około jedną sekundę, obserwując, czy klatka piersiowa się unosi. Wdmuchnij tylko tyle powietrza, żeby klatka zaczęła się unosić.
+Objąłem jego usta swoimi
+# Oczekiwane: [adult-bls/rescue_breaths] Odsuń usta i obserwuj, jak klatka piersiowa opada. Weź kolejny normalny wdech i wykonaj drugi oddech ratowniczy.
+Wdmuchnąłem powietrze, klatka się unosi
+# Oczekiwane: [adult-bls/rescue_breaths] Nie przerywaj uciśnięć dłużej niż dziesięć sekund na dwa oddechy, nawet jeśli któryś z nich byłby nieskuteczny. Bez opóźnienia wróć dłońmi na mostek i wykonaj kolejne trzydzieści uciśnięć. Kontynuuj w stosunku trzydzieści uciśnięć do dwóch oddechów.
+Drugi oddech zrobiony
+# Oczekiwane: [adult-bls/rescue_breaths] Jeśli po dwóch próbach nie udaje się wdmuchnąć powietrza, rozważ, że przyczyną jest ciało obce w drogach oddechowych, i powiedz o tym dyspozytorowi.
+Wracam do uciskania
+# Oczekiwane (przejście do adult-bls/compressions_30_2): Wykonaj trzydzieści uciśnięć klatki piersiowej, tak jak przed chwilą.
+Zrobiłem dwa oddechy i wróciłem do uciskania
+# Oczekiwane (przejście do adult-bls/aed_attach): Włącz AED. Niektóre urządzenia włączają się same po otwarciu pokrywy, a w innych trzeba nacisnąć przycisk zasilania.
+Koleżanka właśnie przyniosła defibrylator
+# Oczekiwane: [adult-bls/aed_attach] Jeśli jest z Tobą druga osoba, niech uciska klatkę piersiową, kiedy Ty przyklejasz elektrody. Jeśli jesteś sam, przerwij uciskanie tylko na czas przyklejania elektrod.
+AED jest włączony
+# Oczekiwane: [adult-bls/aed_attach] Odsłoń klatkę piersiową poszkodowanego i przyklej elektrody w miejscach pokazanych na urządzeniu lub na elektrodach.
+Koleżanka uciska, a ja odsłaniam mu klatkę
+# Oczekiwane: [adult-bls/aed_attach] Dalej wykonuj polecenia głosowe AED.
+Przyklejam elektrody według rysunku
+# Oczekiwane (przejście do adult-bls/aed_analyse): Kiedy AED analizuje rytm serca, nie dotykaj poszkodowanego i dopilnuj, żeby nikt go nie dotykał.
+Elektrody są przyklejone, AED mówi, żeby nikt nie dotykał
+# Oczekiwane: [adult-bls/aed_analyse] Czy AED zaleca wyładowanie?
+Nikt go nie dotyka
+# Oczekiwane (przejście do adult-bls/aed_shock): Upewnij się, że nikt nie dotyka poszkodowanego.
+AED mówi, że zaleca wyładowanie
+# Oczekiwane: [adult-bls/aed_shock] Jeśli AED każe nacisnąć przycisk wyładowania, naciśnij go. Niektóre urządzenia wykonują wyładowanie same.
+Wszyscy odsunięci
+# Oczekiwane: [adult-bls/aed_shock] Zaraz po wyładowaniu natychmiast wróć do uciskania klatki piersiowej.
+Nacisnąłem przycisk
+# Oczekiwane (przejście do adult-bls/resume_compressions): Natychmiast uciskaj klatkę piersiową, tak jak wcześniej.
+Wyładowanie wykonane, wracam do uciskania
+# Oczekiwane: [adult-bls/resume_compressions] Dalej wykonuj polecenia AED. Po jakimś czasie poprosi o przerwę w uciskaniu, żeby ponownie ocenić rytm serca.
+Uciskam
+# Oczekiwane: [adult-bls/resume_compressions] Czy umiesz wykonywać oddechy ratownicze?
+Słucham poleceń AED
+# Oczekiwane (przejście do adult-bls/compressions_30_2): Wykonaj trzydzieści uciśnięć klatki piersiowej, tak jak przed chwilą.
+Tak, umiem robić oddechy
+# Oczekiwane (przejście do adult-bls/end_cpr): Dobrze. Zostań przy poszkodowanym i słuchaj poleceń dyspozytora lub zespołu ratunkowego.
+Przyjechała karetka, ratownik przejął akcję i kazał mi przestać
+# Oczekiwane: procedura jest zakończona, bez nowych kroków
+Dziękuję

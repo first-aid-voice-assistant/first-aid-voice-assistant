@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Created** | 2026-10-26 |
-| **Version** | 0.4 |
+| **Version** | 0.6 |
 
 ## Purpose
 
@@ -41,7 +41,7 @@ Used by the mobile app. Messages are JSON objects with a `type`.
 
 | Direction | `type` | Fields | Meaning |
 |---|---|---|---|
-| app → server | `ask` | `id`, `text` (1–2000 chars), `history` (`[{role: user/assistant, content}]`, up to 50) | New question; cancels the answer in progress |
+| app → server | `ask` | `id`, `text` (1–2000 chars), `history` (`[{role: user/assistant, content}]`, up to 500; the model gets only the latest 20 messages) | New question; cancels the answer in progress |
 | app → server | `cancel` | `id` | Stop that answer (e.g. the user interrupted it) |
 | server → app | `step` | `id`, `media` (e.g. `cpr/compressions`, or `null` before a scenario is chosen) | Sent before the first `delta` when the scenarios are on: the picture the app shows while the answer is said |
 | server → app | `delta` | `id`, `text` | Next piece of the answer |
@@ -60,9 +60,11 @@ The scenarios of `knowledge/` (state machines in YAML; steps may cite their sour
 
 1. At start-up `main.py` builds a `KnowledgeRuntime`: `load_knowledge` (path from `knowledge.path`) checks that every transition and action exists and that every step is reachable, and, if `knowledge/sources/` has files, that every cited source and section exists; `load_scenario_prompts` reads the wording from `prompts/scenario_v1.yaml`. Otherwise the server does not start. The rules from that file are appended once to the system prompt.
 2. Every WebSocket connection gets its own `ScenarioDialogue` (`app/knowledge/dialogue.py`), which holds the cursor: scenario, step and the index of the next thing to say. Before every answer `begin_turn` returns the task for the model ("say this instruction", "repeat", "no procedure yet" or "the procedure is finished"), which `ws.py` appends to the system prompt of that turn. It stays one system message.
-3. Inside a step the cursor moves on by itself: the user's next words are taken as "done". A step says its instructions one per turn, then its question (`asks`). When everything in a step has been said, a short side call to the model gets the user's answer and the numbered transitions of the step and returns one digit; `0`, a number out of range or any reply that is not a bare digit (punctuation around it is fine) means "no transition yet", and the assistant repeats instead of guessing. The first turn chooses the scenario the same way, from `trigger`.
+3. Inside a step the cursor moves on by itself: the user's next words are taken as "done". A step says its instructions one per turn, then its question (`asks`). When everything in a step has been said, a short side call to the model gets the user's answer and the numbered transitions of the step and returns one digit; `0`, a number out of range or any reply that is not a bare digit (punctuation around it is fine) means "no transition yet", and the assistant repeats instead of guessing. The first turn chooses the scenario the same way, from `trigger`. `when: zawsze` (always) is taken without asking. Branches marked `interrupt` are events ("the person stopped breathing", "the AED has arrived"): in every turn of a step that has them a separate short call (`route_event`) asks whether the user has just reported one, so the cursor can leave a long step at once; the phone branch (`obstacle`) is chosen by the intent of the user's words (`route_intent`).
 4. The cursor moves only when the model has finished the answer, so an interrupted answer is said again.
 5. Every instruction has a picture name (`media` in the scenario, per step or per instruction). After `begin_turn`, `ScenarioDialogue.media` holds the picture of the instruction of this turn; a repeat, a question outside the procedure and the end of the procedure keep the picture of the last instruction. `ws.py` sends it as `step` before the answer. The server only names the picture; the files live in the app.
+
+**Verbatim mode** (`knowledge.verbatim: true`, e.g. `configs/experiments/qwen25-7b-verbatim-compose.yaml`). The model never writes the answer: the server says the exact text of the scenario (the instruction, or the last one again when it repeats), and the fixed phrases of `spoken` in `prompts/scenario_v1.yaml` for the cases the scenario does not cover (no procedure yet: stay calm, no drugs, call 112; stuck; fear / question / something new about the person / other, each followed by the last instruction). The model only classifies: the scenario, the intent, the transition, the event and (`route_interject`) the kind of the words outside the procedure. `ws.py` sends the text as one `delta` and `done`, so the app is unchanged; there is no model generation, so the answer starts at once. The price: no free-form wording (the assistant cannot acknowledge or correct the user in its own words), so a wrong transition is the only way to a wrong answer.
 
 Limits: the state lives only as long as the WebSocket connection (a reconnect restarts the scenario); the assistant assumes the user did what it asked when they speak again; each choice of a transition costs one extra model call before the answer starts. `POST /dev/chat` is stateless, so each request starts a scenario from its beginning.
 
@@ -76,7 +78,7 @@ Limits: the state lives only as long as the WebSocket connection (a reconnect re
 ## Configuration
 
 - `configs/*.yaml` select the providers and their parameters (`APP_CONFIG` picks the file): `base.yaml` (Docker), `gemma.yaml` (app on the host, Gemma 3 1B in the Ollama container), `bielik.yaml` (app on the host, Bielik 4.5B v3 in the Ollama container), `fake.yaml` (no model, streams a fixed Polish answer word by word with a delay – for UI work and trying the app; tests swap in an echoing fake).
-- `knowledge: {enabled, path}` and `prompts.knowledge` turn on the scenarios from `knowledge/`; in Docker the folder is mounted read-only at `/knowledge`, which is where `../../knowledge` points from `/app`.
+- `knowledge: {enabled, path, verbatim}` and `prompts.knowledge` turn on the scenarios from `knowledge/` (`verbatim` – see "Guided scenarios"); in Docker the folder is mounted read-only at `/knowledge`, which is where `../../knowledge` points from `/app`.
 - `.env` holds secrets and environment settings (`DEV_MODE`, API keys, `REDIS_URL`).
 - Experiments with other models go to `configs/experiments/`.
 
@@ -109,3 +111,5 @@ Limits: the state lives only as long as the WebSocket connection (a reconnect re
 | 0.2 | 2026-10-29 | `WS /v1/chat` with streamed answers, cancelling and history sent by the app; `gemma.yaml`, `bielik.yaml`; `fake.yaml` streams a fixed answer slowly |
 | 0.3 | 2026-10-29 | Guided scenarios: `app/knowledge/` (loader, validation, `ScenarioDialogue` that gives the model one instruction per turn), `prompts/scenario_v1.yaml`, `knowledge` config section; the server keeps the scenario position per WebSocket connection |
 | 0.4 | 2026-11-08 | `step` event with the picture (`media`) of the current instruction, sent before the answer |
+| 0.5 | 2026-11-18 | A long history is accepted (up to 500 messages) and trimmed to the latest 20 for the model, so a long rescue no longer ends in `Invalid message` |
+| 0.6 | 2026-11-18 | Event branches (`interrupt`) are checked every turn of a step (`route_event`), the phone branch is `obstacle`; `when: zawsze` is taken without asking the model; verbatim mode (`knowledge.verbatim`) says the exact scenario text and fixed phrases (`spoken`), the model only classifies |

@@ -105,7 +105,7 @@ steps:
         goto: check_breathing
       - when: rozmówca nie może zadzwonić (brak zasięgu lub sieci, brak telefonu)
         goto: check_breathing
-        interrupt: true
+        obstacle: true
     sources:
       - {source: erc-2025-bls, section: Alerting the emergency services}
       - {source: erc-2025-bls, section: Concise resuscitation guidelines for all responders}
@@ -224,7 +224,7 @@ steps:
       - when: AED jest już podłączony i prosi o przerwę w uciskaniu, żeby ocenić rytm
         goto: aed_analyse
         interrupt: true
-      - when: ratownik albo dyspozytor każe przestać, poszkodowany w oczywisty sposób odzyskuje przytomność (porusza się, otwiera oczy, prawidłowo oddycha) albo rozmówca jest zbyt zmęczony
+      - when: przyjechała pomoc (ratownicy, zespół ratunkowy) i przejęła czynności, albo ratownik lub dyspozytor każe przestać, albo poszkodowany w oczywisty sposób odzyskuje przytomność (porusza się, otwiera oczy, prawidłowo oddycha), albo rozmówca jest zbyt zmęczony
         goto: end_cpr
     note: |-
       NEEDS MEDICAL REVIEW:
@@ -258,7 +258,7 @@ steps:
       - when: AED jest już podłączony i prosi o przerwę w uciskaniu, żeby ocenić rytm
         goto: aed_analyse
         interrupt: true
-      - when: ratownik albo dyspozytor każe przestać, poszkodowany w oczywisty sposób odzyskuje przytomność (porusza się, otwiera oczy, prawidłowo oddycha) albo rozmówca jest zbyt zmęczony
+      - when: przyjechała pomoc (ratownicy, zespół ratunkowy) i przejęła czynności, albo ratownik lub dyspozytor każe przestać, albo poszkodowany w oczywisty sposób odzyskuje przytomność (porusza się, otwiera oczy, prawidłowo oddycha), albo rozmówca jest zbyt zmęczony
         goto: end_cpr
     note: |-
       NEEDS MEDICAL REVIEW:

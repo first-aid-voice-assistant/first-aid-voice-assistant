@@ -21,6 +21,9 @@ class KnowledgeConfig(BaseModel):
 
     enabled: bool = False
     path: str = "../../knowledge"  # repository root's knowledge/, relative to poc/server/
+    # Say the exact text of the scenarios (and fixed phrases from the scenario prompts) instead of
+    # letting the model write the answer; the model then only classifies what the user said.
+    verbatim: bool = False
 
 
 class PromptsConfig(BaseModel):

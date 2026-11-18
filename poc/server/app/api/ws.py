@@ -22,6 +22,12 @@ from app.providers.base import LLMDelta, LLMDone, LLMOptions, LLMProvider, Messa
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+# A long rescue (CPR) easily exceeds 25 turns, so a long history must not be rejected: that would
+# turn every later answer into an error. The server accepts a generous amount and gives the model
+# only the latest messages (the position in the scenario is kept by the dialogue, not the history).
+_MAX_HISTORY_ACCEPTED = 500
+_MAX_HISTORY_FOR_MODEL = 20
+
 
 class HistoryMessage(BaseModel):
     role: Literal["user", "assistant"]
@@ -32,7 +38,7 @@ class AskMessage(BaseModel):
     type: Literal["ask"]
     id: str = Field(min_length=1, max_length=64)
     text: str = Field(min_length=1, max_length=2000)
-    history: list[HistoryMessage] = Field(default_factory=list, max_length=50)
+    history: list[HistoryMessage] = Field(default_factory=list, max_length=_MAX_HISTORY_ACCEPTED)
 
 
 class CancelMessage(BaseModel):
@@ -131,7 +137,9 @@ class _ChatSession:
             await self._send(CancelledEvent(id=ask_id))
 
     async def _answer(self, msg: AskMessage) -> None:
-        history = [Message(role=m.role, content=m.content) for m in msg.history]
+        history = [
+            Message(role=m.role, content=m.content) for m in msg.history[-_MAX_HISTORY_FOR_MODEL:]
+        ]
         started = time.perf_counter()
         first_token_ms: int | None = None
         try:
@@ -139,6 +147,9 @@ class _ChatSession:
             if self._dialogue is not None:
                 task = await self._dialogue.begin_turn(msg.text, history)
                 await self._send(StepEvent(id=msg.id, media=self._dialogue.media))
+                if self._dialogue.spoken is not None:
+                    await self._say_verbatim(msg.id, self._dialogue.spoken, started)
+                    return
             messages = build_prompt(self._system_prompt, history, msg.text, task)
             async for ev in self._llm.generate_stream(messages, LLMOptions()):
                 if isinstance(ev, LLMDelta):
@@ -165,6 +176,16 @@ class _ChatSession:
             logger.exception("LLM call failed")
             with contextlib.suppress(Exception):
                 await self._send(ErrorEvent(id=msg.id, message="The model failed to answer"))
+
+    async def _say_verbatim(self, ask_id: str, text: str, started: float) -> None:
+        """Sends a ready text (verbatim mode) in the same events as a streamed model answer."""
+        assert self._dialogue is not None
+        await self._send(DeltaEvent(id=ask_id, text=text))
+        first_token_ms = _elapsed_ms(started)
+        self._dialogue.turn_completed()
+        await self._send(
+            DoneEvent(id=ask_id, text=text, first_token_ms=first_token_ms, total_ms=first_token_ms)
+        )
 
     async def _send(self, event: ServerEvent) -> None:
         async with self._send_lock:
