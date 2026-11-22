@@ -370,6 +370,21 @@ async def test_the_step_question_offers_none_for_an_answer_that_is_not_about_it(
     assert "Czy krwawienie ustało" in task  # the cursor stayed: the question is repeated
 
 
+async def test_no_none_option_after_a_plain_instruction() -> None:
+    # After an instruction (no question) the user reports an event ("przestała oddychać"); with a
+    # "none" offered the model answered it 10 times in 10 and the switch to CPR was missed.
+    dialogue, llm = make(["1"])
+    _at(dialogue, "adult-recovery-position", "monitor")
+    for _ in range(3):  # the three instructions of the step
+        await turn(dialogue, "Zaczynam")
+
+    await turn(dialogue, "Przestała oddychać normalnie, tylko chrapie")
+
+    prompt = llm.calls[-1][0].content
+    assert "poszkodowany przestał oddychać prawidłowo" in prompt
+    assert "0. odpowiedź nie mówi nic o tym" not in prompt
+
+
 async def test_ok_after_the_speakerphone_instruction_goes_on_without_asking_the_model() -> None:
     # The call was confirmed by the first instruction. A plain "ok" after the second one used to be
     # matched against "help was called", the model answered "none" and the instruction was repeated.

@@ -283,6 +283,9 @@ class ScenarioDialogue:
             assistant=_one_line(last_assistant),
             user=_one_line(user_text),
             options="\n".join(f"{i}. {_one_line(t.when)}" for i, t in enumerate(transitions, 1)),
+            # An answer to a question may be about something else; after a plain instruction the
+            # user reports an event instead, and an offered "none" made the model miss it.
+            none=f"\n{self._prompts.route_step_none}" if self._step.asks else "",
         )
         choice = await self._choose(prompt, len(transitions))
         if not choice:

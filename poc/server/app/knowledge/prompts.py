@@ -33,6 +33,7 @@ class ScenarioPrompts(BaseModel):
     stuck: str
     route_scenario: str
     route_step: str
+    route_step_none: str  # extra "none" option, only for a step that ends with a question
     route_event: str
     route_intent: str
     route_interject: str

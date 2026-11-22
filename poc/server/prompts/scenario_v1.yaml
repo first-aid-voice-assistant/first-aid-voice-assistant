@@ -58,12 +58,17 @@ route_step: |
   Rozmówca odpowiedział: „{user}”
 
   Odpowiedź „tak” potwierdza to, o co zapytał asystent; odpowiedź „nie” temu zaprzecza. Stwierdzenia:
-  {options}
-  0. odpowiedź nie mówi nic o tym, o co zapytał asystent (rozmówca mówi o czymś innym, czegoś szuka, nie wie, prosi o chwilę)
+  {options}{none}
 
   Wybierz numer stwierdzenia, które rozmówca potwierdził albo opisał swoją odpowiedzią. Wybierz 0 tylko wtedy, gdy odpowiedź nie potwierdza żadnego z nich (na przykład mówi, że jeszcze nie, albo mówi o czymś innym).
 
   Odpowiedz samą cyfrą, bez żadnych innych słów.
+
+# The "none" option of `route_step`, added only when the step ends with a question (`asks`): without
+# it the model picked a statement for an answer that is about something else ("szukam opatrunku" ->
+# "krwawienie ustało"). Not added after a plain instruction: there the user reports an event
+# ("przestała oddychać") and the extra option made the model miss it.
+route_step_none: "0. odpowiedź nie mówi nic o tym, o co zapytał asystent (rozmówca mówi o czymś innym, czegoś szuka, nie wie, prosi o chwilę)"
 
 # Asked every turn in the middle of a step that has event branches (`interrupt` transitions, e.g. the
 # person stopped breathing, the AED has arrived): did the user just report one of them?
