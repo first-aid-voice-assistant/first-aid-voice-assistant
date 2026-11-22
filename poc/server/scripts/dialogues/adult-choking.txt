@@ -39,16 +39,13 @@ Osunął się i stracił przytomność
 # Oczekiwane: [adult-choking/unresponsive] Upewnij się, że wezwano pogotowie pod numer dziewięćset dziewięćdziesiąt dziewięć, i od razu zacznij RKO.
 Położyłem go na plecach
 # Oczekiwane (przejście do adult-bls/chest_compressions): Uklęknij obok poszkodowanego.
+# Oczekiwane (przejście do adult-bls/chest_compressions/0): Uklęknij obok poszkodowanego. Jeśli ubranie przeszkadza w znalezieniu mostka, odsłoń klatkę piersiową.
 Żona dzwoni, zaczynam
-# Oczekiwane: [adult-bls/chest_compressions] Jeśli ubranie przeszkadza w znalezieniu mostka, odsłoń klatkę piersiową.
-Klęczę obok niego
-# Oczekiwane: [adult-bls/chest_compressions] Połóż nasadę jednej dłoni na środku klatki piersiowej, czyli na dolnej połowie mostka.
-Odsłoniłem mu klatkę piersiową
-# Oczekiwane: [adult-bls/chest_compressions] Drugą dłoń połóż na pierwszej i spleć palce.
+# Oczekiwane: [adult-bls/chest_compressions/1] Połóż nasadę jednej dłoni na środku klatki piersiowej, czyli na dolnej połowie mostka.
+Klęczę obok niego i odsłoniłem mu klatkę piersiową
+# Oczekiwane: [adult-bls/chest_compressions/2] Drugą dłoń połóż na pierwszej i spleć palce. Wyprostuj ramiona i ustaw je pionowo nad klatką piersiową poszkodowanego.
 Dłoń leży na środku klatki
-# Oczekiwane: [adult-bls/chest_compressions] Wyprostuj ramiona i ustaw je pionowo nad klatką piersiową poszkodowanego.
-Drugą dłoń położyłem na pierwszej
-# Oczekiwane: [adult-bls/chest_compressions] Uciskaj mostek na głębokość co najmniej pięciu, ale nie więcej niż sześciu centymetrów, w tempie od stu do stu dwudziestu uciśnięć na minutę.
-Ramiona mam proste
-# Oczekiwane: [adult-bls/chest_compressions] Po każdym uciśnięciu pozwól klatce piersiowej całkowicie wrócić do pozycji wyjściowej, nie opierając się na niej, ale nie odrywaj dłoni od klatki.
+# Oczekiwane: [adult-bls/chest_compressions/3] Uciskaj mostek na głębokość co najmniej pięciu, ale nie więcej niż sześciu centymetrów, w tempie od stu do stu dwudziestu uciśnięć na minutę.
+Drugą dłoń położyłem na pierwszej, ramiona mam proste
+# Oczekiwane: [adult-bls/chest_compressions/4] Po każdym uciśnięciu pozwól klatce piersiowej całkowicie wrócić do pozycji wyjściowej, nie opierając się na niej, ale nie odrywaj dłoni od klatki.
 Uciskam

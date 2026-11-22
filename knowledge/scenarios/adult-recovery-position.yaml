@@ -30,6 +30,7 @@ steps:
         goto: roll_to_side
       - when: poszkodowany przestał oddychać prawidłowo
         handoff: adult-bls/check_breathing
+        log: BREATHING_ABNORMAL
         interrupt: true
     sources:
       - {source: erc-2025-first-aid, section: Recovery position}
@@ -50,11 +51,13 @@ steps:
       ERC: Recovery position; Cervical spinal motion restriction.
     instructions:
       - Nie zmieniaj pozycji poszkodowanego, chyba że zagraża mu niebezpieczeństwo. Po urazie powinien leżeć na plecach.
-      - Uklęknij za głową poszkodowanego i oprzyj łokcie na ziemi lub na kolanach. Delikatnie przytrzymaj jego głowę dłońmi po bokach, tak żeby kciuki były powyżej uszu, a pozostałe palce poniżej. Nie zakrywaj uszu.
+      - text: Uklęknij za głową poszkodowanego i oprzyj łokcie na ziemi lub na kolanach. Delikatnie przytrzymaj jego głowę dłońmi po bokach, tak żeby kciuki były powyżej uszu, a pozostałe palce poniżej. Nie zakrywaj uszu.
+        action: STABILISE_HEAD_NECK
       - Cały czas obserwuj oddech. Zadzwoń pod dziewięćset dziewięćdziesiąt dziewięć, jeśli jeszcze tego nie zrobiono, i słuchaj poleceń dyspozytora.
     transitions:
       - when: poszkodowany przestał oddychać prawidłowo albo oddycha nieprawidłowo
         handoff: adult-bls/check_breathing
+        log: BREATHING_ABNORMAL
     sources:
       - {source: erc-2025-first-aid, section: Recovery position}
       - {source: erc-2025-first-aid, section: Cervical spinal motion restriction}
@@ -70,7 +73,8 @@ steps:
       - Rękę leżącą bliżej Ciebie odłóż na bok pod kątem prostym do ciała. Może być wyprostowana albo zgięta w łokciu.
       - Drugą rękę poszkodowanego, tę dalszą od Ciebie, przełóż przez jego klatkę piersiową i przyłóż wierzchem dłoni do jego policzka po Twojej stronie.
       - Drugą dłonią chwyć dalszą nogę tuż nad kolanem i delikatnie unieś ją, zginając w kolanie, ze stopą opartą na podłodze.
-      - Dłoń poszkodowanego trzymaj przy policzku. Pociągnij zgiętą nogę do siebie i ostrożnie obróć poszkodowanego na bok, w swoją stronę.
+      - text: Dłoń poszkodowanego trzymaj przy policzku. Pociągnij zgiętą nogę do siebie i ostrożnie obróć poszkodowanego na bok, w swoją stronę.
+        action: ROLL_TO_RECOVERY_POSITION
       - Ułóż górną nogę tak, żeby biodro i kolano były zgięte pod kątem prostym.
       - Delikatnie odchyl głowę do tyłu, żeby drogi oddechowe pozostały otwarte. W razie potrzeby popraw dłoń pod policzkiem tak, żeby głowa była odchylona i zwrócona w dół na bok, a płyny mogły wypłynąć z ust.
     asks: Czy poszkodowany leży już na boku?
@@ -79,6 +83,7 @@ steps:
         goto: monitor
       - when: poszkodowany przestał oddychać prawidłowo
         handoff: adult-bls/check_breathing
+        log: BREATHING_ABNORMAL
         interrupt: true
     sources:
       - {source: erc-2025-first-aid, section: Recovery position}
@@ -101,5 +106,6 @@ steps:
     transitions:
       - when: poszkodowany przestał oddychać prawidłowo
         handoff: adult-bls/check_breathing
+        log: BREATHING_ABNORMAL
     sources:
       - {source: erc-2025-first-aid, section: Recovery position}

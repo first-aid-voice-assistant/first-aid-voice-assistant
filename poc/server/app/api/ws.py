@@ -87,7 +87,8 @@ class ErrorEvent(BaseModel):
 
 
 class ActionLoggedEvent(BaseModel):
-    """A rescue action recognised in the user's words; the client keeps it in its event log."""
+    """An action the user confirmed, or an observation they reported; the client keeps it in its
+    event log (the dialogue decides, see `ScenarioDialogue.logged`)."""
 
     type: Literal["action_logged"] = "action_logged"
     id: str  # id of the question the action was reported in
@@ -111,8 +112,6 @@ class _ChatSession:
         self._system_prompt = system_prompt
         self._dialogue = dialogue
         self._recorder = recorder
-        # Event log calls outlive the answer: what the user did is true even if they interrupt it.
-        self._logging: set[asyncio.Task[None]] = set()
         # Answers stream from a task while the receive loop keeps reading; the lock keeps
         # their frames from interleaving with frames sent by the loop.
         self._send_lock = asyncio.Lock()
@@ -126,9 +125,6 @@ class _ChatSession:
             pass
         finally:
             await self._stop_current(notify=False)
-            for task in list(self._logging):
-                task.cancel()
-            await asyncio.gather(*self._logging, return_exceptions=True)
 
     async def _handle(self, raw: str) -> None:
         try:
@@ -141,12 +137,8 @@ class _ChatSession:
                 await self._stop_current(notify=True)
             return
         await self._stop_current(notify=True)
-        if self._recorder is not None:
-            spoken_at = msg.spoken_at or datetime.now(UTC)
-            logging_task = asyncio.create_task(self._log_actions(msg, self._recorder, spoken_at))
-            self._logging.add(logging_task)
-            logging_task.add_done_callback(self._logging.discard)
-        self._current = (msg.id, asyncio.create_task(self._answer(msg)))
+        spoken_at = msg.spoken_at or datetime.now(UTC)
+        self._current = (msg.id, asyncio.create_task(self._answer(msg, spoken_at)))
 
     async def _stop_current(self, *, notify: bool) -> None:
         current, self._current = self._current, None
@@ -161,7 +153,7 @@ class _ChatSession:
         if notify:
             await self._send(CancelledEvent(id=ask_id))
 
-    async def _answer(self, msg: AskMessage) -> None:
+    async def _answer(self, msg: AskMessage, spoken_at: datetime) -> None:
         history = [
             Message(role=m.role, content=m.content) for m in msg.history[-_MAX_HISTORY_FOR_MODEL:]
         ]
@@ -171,6 +163,7 @@ class _ChatSession:
             task = None
             if self._dialogue is not None:
                 task = await self._dialogue.begin_turn(msg.text, history)
+                await self._log_actions(msg, spoken_at)
                 await self._send(StepEvent(id=msg.id, media=self._dialogue.media))
                 if self._dialogue.spoken is not None:
                     await self._say_verbatim(msg.id, self._dialogue.spoken, started)
@@ -212,21 +205,21 @@ class _ChatSession:
             DoneEvent(id=ask_id, text=text, first_token_ms=first_token_ms, total_ms=first_token_ms)
         )
 
-    async def _log_actions(
-        self, msg: AskMessage, recorder: EventLogRecorder, spoken_at: datetime
-    ) -> None:
-        history = [Message(role=m.role, content=m.content) for m in msg.history]
+    async def _log_actions(self, msg: AskMessage, spoken_at: datetime) -> None:
+        """Sends the event log entries of this turn, as decided by the dialogue (no model call)."""
+        if self._recorder is None or self._dialogue is None:
+            return
         try:
-            for entry in await recorder.record(msg.text, history, spoken_at):
+            for entry in self._recorder.record(self._dialogue.logged, msg.text, spoken_at):
                 await self._send(ActionLoggedEvent(id=msg.id, entry=entry))
         except asyncio.CancelledError:
             raise
         except WebSocketDisconnect:
-            return
+            raise
         except Exception:
             # The answer matters more than the log, and an error event would make the client
             # show its "call 112" fallback; so this is only logged on the server.
-            logger.exception("Event log call failed")
+            logger.exception("Event log failed")
 
     async def _send(self, event: ServerEvent) -> None:
         async with self._send_lock:
@@ -244,5 +237,5 @@ async def chat(ws: WebSocket) -> None:
     knowledge = state.knowledge
     dialogue = knowledge.dialogue(state.llm) if knowledge is not None else None
     event_log = state.event_log
-    recorder = event_log.recorder(state.llm) if event_log is not None else None
+    recorder = event_log.recorder() if event_log is not None else None
     await _ChatSession(ws, state.llm, state.system_prompt, dialogue, recorder).run()

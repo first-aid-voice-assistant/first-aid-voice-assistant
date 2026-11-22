@@ -29,14 +29,14 @@ class KnowledgeConfig(BaseModel):
 class PromptsConfig(BaseModel):
     system: str
     knowledge: str | None = None  # template of the knowledge section; needed when it is enabled
-    event_log: str | None = None  # prompts of the event log calls; needed when it is enabled
 
 
 class EventLogConfig(BaseModel):
-    """Rescue actions recognised in the user's words and sent to the client as log entries.
+    """Actions the user confirmed and observations they reported, sent to the client as log entries.
 
-    Needs `knowledge.enabled` (the action dictionary comes from there). Leave it off for
-    clients that do not know the `action_logged` event yet.
+    The scenarios decide what is logged (`action` and `log` in `knowledge/`), so no model call is
+    made. Needs `knowledge.enabled` (the dictionary comes from there). Leave it off for clients
+    that do not know the `action_logged` event yet.
     """
 
     enabled: bool = False

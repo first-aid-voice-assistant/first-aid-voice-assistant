@@ -354,6 +354,54 @@ async def test_an_unconditional_transition_is_taken_without_asking_the_model() -
     assert len(llm.calls) == calls_before  # no side call chose the transition
 
 
+async def test_the_step_question_offers_none_for_an_answer_that_is_not_about_it() -> None:
+    # "Cały czas szukam opatrunku" after "did the bleeding stop?" used to be matched to a statement
+    # (the tourniquet branch 11 times in 12): the model needs an explicit "none" among the options.
+    dialogue, llm = make(["0"])
+    _at(dialogue, "adult-severe-bleeding", "direct_pressure")
+    for _ in range(4):  # three instructions and the question
+        await turn(dialogue, "Zaczynam")
+
+    task = await turn(dialogue, "Cały czas szukam opatrunku")
+
+    prompt = llm.calls[-1][0].content
+    assert "0. odpowiedź nie mówi nic o tym, o co zapytał asystent" in prompt
+    assert "krwawienie ustało albo jest pod kontrolą" in prompt
+    assert "Czy krwawienie ustało" in task  # the cursor stayed: the question is repeated
+
+
+async def test_ok_after_the_speakerphone_instruction_goes_on_without_asking_the_model() -> None:
+    # The call was confirmed by the first instruction. A plain "ok" after the second one used to be
+    # matched against "help was called", the model answered "none" and the instruction was repeated.
+    for scenario, step, next_instruction in [
+        ("adult-bls", "call_emergency", "Ułóż poszkodowanego na plecach"),
+        ("adult-severe-bleeding", "call_emergency", "Mocno uciśnij dłonią ranę"),
+    ]:
+        dialogue, llm = make([])
+        _at(dialogue, scenario, step)
+        await turn(dialogue, "Zaczynam")  # instruction 1: call
+        await turn(dialogue, "Dzwonię")  # instruction 2: speakerphone
+        calls_before = len(llm.calls)
+
+        task = await turn(dialogue, "ok")
+
+        assert next_instruction in task, scenario
+        assert len(llm.calls) == calls_before, scenario  # no side call chose the transition
+
+
+async def test_no_signal_after_the_speakerphone_instruction_is_still_an_obstacle() -> None:
+    dialogue, llm = make([], intents=["POTWIERDZENIE", "POTWIERDZENIE", "PRZESZKODA"])
+    _at(dialogue, "adult-severe-bleeding", "call_emergency")
+    await turn(dialogue, "Zaczynam")
+    await turn(dialogue, "Dzwonię")
+    calls_before = len(llm.calls)
+
+    task = await turn(dialogue, "Nie mam zasięgu")
+
+    assert "Mocno uciśnij dłonią ranę" in task
+    assert len(llm.calls) == calls_before
+
+
 RECOVERY = "adult-recovery-position"
 
 
@@ -491,3 +539,118 @@ def test_websocket_in_verbatim_mode_sends_the_exact_text_without_asking_the_mode
     assert events[1]["text"] == text
     assert events[2]["text"] == text
     assert len(llm.calls) == 1  # only the call that chose the scenario
+
+
+def _at(dialogue: ScenarioDialogue, scenario: str, step: str) -> None:
+    dialogue._enter(dialogue._scenarios[scenario], step)
+
+
+async def test_confirming_an_instruction_logs_its_action() -> None:
+    dialogue, _ = make([BLS, "1"])
+    await turn(dialogue, "Kolega leży")  # safety: "make sure it is safe"
+
+    await turn(dialogue, "Jest bezpiecznie")
+
+    assert dialogue.logged == ["CHECK_SAFETY"]
+
+
+async def test_nothing_is_logged_when_the_first_instruction_is_said() -> None:
+    dialogue, _ = make([BLS])
+
+    await turn(dialogue, "Kolega leży")
+
+    assert dialogue.logged == []
+
+
+async def test_a_question_or_a_problem_is_not_a_confirmation() -> None:
+    for intent, words in [("INNE", "Mogę mu dać wody?"), ("PRZESZKODA", "Nie mam zasięgu")]:
+        dialogue, _ = make([], intents=[intent])
+        _at(dialogue, "adult-bls", "call_emergency")
+        await turn(dialogue, "Zaczynam")  # says the instruction to call
+
+        await turn(dialogue, words)
+
+        assert dialogue.logged == [], words
+
+
+async def test_words_that_only_announce_the_action_are_not_logged() -> None:
+    for words in ["Zaraz zadzwonię", "Za chwilę zadzwonię", "Spróbuję zadzwonić"]:
+        dialogue, _ = make([])
+        _at(dialogue, "adult-bls", "call_emergency")
+        await turn(dialogue, "Zaczynam")
+
+        await turn(dialogue, words)
+
+        assert dialogue.logged == [], words
+
+
+async def test_reporting_an_event_is_not_a_confirmation_of_the_last_instruction() -> None:
+    dialogue, _ = make([], events=["1"])
+    _at(dialogue, "adult-bls", "compressions_30_2")
+    await turn(dialogue, "Zaczynam")  # "do thirty compressions"
+
+    await turn(dialogue, "Koleżanka przyniosła defibrylator")
+
+    assert dialogue.logged == ["AED_ARRIVED"]  # not CHEST_COMPRESSIONS as well
+
+
+async def test_the_tourniquet_and_its_time_are_logged_when_the_user_confirms_them() -> None:
+    dialogue, _ = make([])
+    _at(dialogue, "adult-severe-bleeding", "tourniquet")
+    await turn(dialogue, "Mam opaskę")  # "put the tourniquet 5-7 cm above the wound"
+    await turn(dialogue, "Założyłem opaskę")
+    applied = dialogue.logged
+    await turn(dialogue, "Zaciągam ją")  # "tighten it"
+    tightening = dialogue.logged
+    await turn(dialogue, "Zapisałem godzinę")  # "write the time on it"
+
+    assert applied == ["APPLY_TOURNIQUET"]
+    assert tightening == []
+    assert dialogue.logged == ["NOTE_TOURNIQUET_TIME"]
+
+
+async def test_the_start_of_compressions_is_logged_when_the_user_says_they_press() -> None:
+    dialogue, _ = make([])
+    _at(dialogue, "adult-bls", "chest_compressions")
+    for _ in range(4):  # kneel, hand, second hand and arms, "press the sternum"
+        await turn(dialogue)
+
+    await turn(dialogue, "Uciskam i liczę")
+
+    assert dialogue.logged == ["CHEST_COMPRESSIONS"]
+
+
+async def test_losing_consciousness_is_an_observation_taken_with_the_branch() -> None:
+    dialogue, _ = make(["3"])  # back_blows: 1 cleared, 2 still choking, 3 unconscious
+    _at(dialogue, "adult-choking", "back_blows")
+    for _ in range(3):  # stand behind, the blows, the question
+        await turn(dialogue)
+
+    await turn(dialogue, "Osunął się i stracił przytomność")
+
+    assert dialogue.logged == ["UNRESPONSIVE"]
+
+
+async def test_the_end_of_cpr_is_an_observation() -> None:
+    dialogue, _ = make(["4"])  # compressions_30_2: 1 done, 2 and 3 the AED, 4 stop
+    _at(dialogue, "adult-bls", "compressions_30_2")
+    await turn(dialogue, "Zaczynam")
+
+    await turn(dialogue, "Przyjechała karetka, ratownik przejął akcję")
+
+    assert "CPR_STOPPED" in dialogue.logged
+
+
+async def test_asking_again_after_a_cancelled_turn_does_not_log_the_action_twice() -> None:
+    # The branch is taken (and the action logged) when the turn begins, even if the answer is then
+    # cancelled; the repeated question starts in the next step, where nothing was confirmed yet.
+    dialogue, _ = make([BLS, "1"])
+    await turn(dialogue, "Kolega leży")
+    await dialogue.begin_turn("Jest bezpiecznie", [])  # never completed: cancelled
+    first = dialogue.logged
+
+    await dialogue.begin_turn("Jest bezpiecznie", [])
+    second = dialogue.logged
+
+    assert first == ["CHECK_SAFETY"]
+    assert second == []

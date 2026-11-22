@@ -36,6 +36,9 @@ class ScenarioPrompts(BaseModel):
     route_event: str
     route_intent: str
     route_interject: str
+    # Regular expression for words that announce an action instead of reporting it; such a reply is
+    # no confirmation for the event log.
+    announcement: str
     spoken: SpokenPhrases
 
 

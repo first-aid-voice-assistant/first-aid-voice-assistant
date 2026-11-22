@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Created** | 2026-11-08 |
-| **Status** | accepted |
+| **Status** | accepted; points 2 and 3 (recognition by a model call) superseded by [0003](0003-event-log-from-scenarios.md) |
 
 ## Context
 

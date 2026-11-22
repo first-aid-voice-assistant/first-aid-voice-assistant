@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 from app.api import dev, rest, ws
 from app.core.config import AppConfig, Settings, load_config
-from app.eventlog import EventLogRuntime, load_event_log_prompts
+from app.eventlog import EventLogRuntime
 from app.knowledge import KnowledgeRuntime, load_knowledge, load_scenario_prompts
 from app.providers.registry import build_llm
 
@@ -29,9 +29,7 @@ def _build_event_log(
         return None
     if knowledge is None:
         raise ValueError("event_log.enabled needs knowledge.enabled (the action dictionary)")
-    if config.prompts.event_log is None:
-        raise ValueError("event_log.enabled needs prompts.event_log (the event log prompts file)")
-    return EventLogRuntime(knowledge.kb.actions, load_event_log_prompts(config.prompts.event_log))
+    return EventLogRuntime(knowledge.kb.actions)
 
 
 def create_app(config_path: str | None = None) -> FastAPI:

@@ -59,6 +59,7 @@ route_step: |
 
   Odpowiedź „tak” potwierdza to, o co zapytał asystent; odpowiedź „nie” temu zaprzecza. Stwierdzenia:
   {options}
+  0. odpowiedź nie mówi nic o tym, o co zapytał asystent (rozmówca mówi o czymś innym, czegoś szuka, nie wie, prosi o chwilę)
 
   Wybierz numer stwierdzenia, które rozmówca potwierdził albo opisał swoją odpowiedzią. Wybierz 0 tylko wtedy, gdy odpowiedź nie potwierdza żadnego z nich (na przykład mówi, że jeszcze nie, albo mówi o czymś innym).
 
@@ -106,6 +107,11 @@ route_interject: |
   0. Nic z tego.
 
   Odpowiedz samą cyfrą, bez żadnych innych słów.
+
+# Event log: words that announce an action instead of reporting it ("zaraz zadzwonię", "za chwilę
+# zacznę"). A reply that matches is not taken as a confirmation, so nothing is logged for it. A
+# regular expression, case-insensitive; the model plays no part in this.
+announcement: "(zaraz|za chwil[a-ząęłńóśźż]+|za moment|zacznę|zrobię|zadzwonię|sprawdzę|spróbuję)"
 
 # Verbatim mode only: the assistant says exactly these texts and the instructions of the scenarios,
 # the model writes nothing. They follow the rules of the project: reassure a person who is afraid;

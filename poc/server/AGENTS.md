@@ -18,10 +18,10 @@ With `DEV_MODE=true` the app serves a test page at `/dev` and `POST /dev/chat` (
 ## Directory map
 
 - `app/api/` – REST, the chat WebSocket (`ws.py`), dev test endpoint/page; `app/core/` – config, logging
-- `app/pipeline/` – prompt building and `complete()` for short side calls (orchestration comes later); `app/eventlog/` – the event log: entry model, action detector, recorder (see ADR 0002); `app/knowledge/` – loads and validates the scenarios of `knowledge/` and walks through them one instruction at a time (`dialogue.py`)
+- `app/pipeline/` – prompt building and `complete()` for short side calls (orchestration comes later); `app/eventlog/` – the event log: entry model and recorder; what is logged is decided by the scenarios (see ADR 0003); `app/knowledge/` – loads and validates the scenarios of `knowledge/` and walks through them one instruction at a time (`dialogue.py`)
 - `app/providers/` – interfaces (`base.py`), registry (`registry.py`), adapters in `asr/ llm/ embeddings/ tts/`
 - `app/rag/` – empty for now (planned: `Retriever` + `NullRetriever`)
-- `configs/` – `base.yaml`, `experiments/`; `prompts/` – system prompt, `scenario_v1.yaml` (wording of the guided conversation) and `event_log_v1.yaml` (the call that recognises actions)
+- `configs/` – `base.yaml`, `experiments/`; `prompts/` – system prompt, `scenario_v1.yaml` (wording of the guided conversation)
 - `tests/unit`, `tests/contract`
 - `docs/` – architecture and coding conventions of the server
 - Shared with other parts (repository root): `knowledge/`, `eval/`
@@ -48,7 +48,7 @@ Templates in `.claude/skills/` (`add-llm-provider`, `add-asr-provider`, `swap-mo
 - Pipeline and API code never import concrete providers; new models go through the registry plus a config entry only.
 - Every provider must pass the contract tests (`tests/contract`).
 - Secrets live only in `.env` (template: `.env.example`).
-- Prompts live in `prompts/`, not in code. `prompts/event_log_v1.yaml` follows the same safety stance: when unsure, record nothing; keep it in step with the rules above when you change it.
+- Prompts live in `prompts/`, not in code. The event log makes no model call: it records only what a scenario asked for and the user confirmed (or a branch observed), so when unsure it records nothing; keep `announcement` in `prompts/scenario_v1.yaml` in step with how people announce actions.
 - Request and response models used by the mobile app are its API: change them deliberately and update the mobile app in the same pull request. Event-log entries follow `docs/project/architecture.md`.
 - A model change means a new config in `configs/experiments/` plus an entry in the evaluation results table (`eval/results/` at the repository root).
 - Coding conventions: [docs/conventions.md](docs/conventions.md).

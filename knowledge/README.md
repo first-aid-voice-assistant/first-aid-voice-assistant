@@ -4,7 +4,7 @@ Vetted first-aid and emergency-medicine knowledge that the assistant relies on. 
 
 | Path | Content | In git |
 |---|---|---|
-| `scenarios/` | Machine-readable rules in YAML: `actions.yaml` (dictionary of rescue actions) and one file per scenario | yes |
+| `scenarios/` | Machine-readable rules in YAML: `actions.yaml` (dictionary of the event log: rescue actions and observations) and one file per scenario | yes |
 | `sources/` | Optional descriptions of the source documents, one YAML file per document (see below) | yes, when added |
 | `raw/` | Original documents (guidelines, procedures, training materials) | **no** – may be under licences that forbid redistribution |
 
@@ -19,7 +19,7 @@ Vetted first-aid and emergency-medicine knowledge that the assistant relies on. 
 
 | File | Content |
 |---|---|
-| `actions.yaml` | Actions: `code` (e.g. `CHEST_COMPRESSIONS`), Polish `name`, `level`, colloquial `synonyms` |
+| `actions.yaml` | Event log dictionary: `code` (e.g. `CHEST_COMPRESSIONS`), Polish `name`, `level`, colloquial `synonyms`, and `kind`: `action` (the default; something the rescuer does) or `observation` (a change in the situation, e.g. `UNRESPONSIVE`) |
 | `adult-bls.yaml` | Adult cardiac arrest: check safety and response, call 999, check breathing, compressions, rescue breaths 30:2 for trained rescuers, AED; hands an unresponsive person who breathes normally to the recovery position |
 | `adult-choking.yaml` | Adult choking: cough, 5 back blows, 5 abdominal thrusts, alternating, CPR when the person becomes unresponsive |
 | `adult-recovery-position.yaml` | Unresponsive adult who breathes normally: exclusion of trauma, recovery position step by step, monitoring of breathing |
@@ -27,11 +27,11 @@ Vetted first-aid and emergency-medicine knowledge that the assistant relies on. 
 
 A scenario has `id`, `title`, `trigger` (when to choose it), `level`, `start` and a list of `steps`. A step has:
 
-- `instructions` – what to say, one at a time (Polish, numbers in words because the answer is read aloud); an item is a string, or `{text, media}` when it has its own picture;
+- `instructions` – what to say, one at a time (Polish, numbers in words because the answer is read aloud); an item is a string, or `{text, media, action}` when it has its own picture or asks for an action: `action` is a code of kind `action` that is also one of the step's `actions`, and it is written to the event log when the rescuer confirms the instruction;
 - `media` – optional name of the picture the mobile app shows while the step's instructions are said (`<set>/<picture>`, e.g. `cpr/compressions`); an instruction's own `media` wins, the question in `asks` keeps the picture of the last instruction. A scenario that uses pictures must have one for every instruction. The drawings live in the app (`poc/mobile/assets/illustrations/`) and need the same medical review as the text;
 - `asks` – an optional question asked after the instructions;
 - `actions` – codes from `actions.yaml` the rescuer may perform in this step;
-- `transitions` – `when` (a condition, in Polish) and `goto` (a step) or `handoff` (`scenario/step`); an optional `interrupt: true` marks a branch for an event (e.g. "the person stopped breathing", "the AED has arrived") that may be taken in the middle of a step, before all its instructions were said: the server asks the model about it every turn of the step; an optional `obstacle: true` (implies `interrupt`) marks the branch for a phone problem (no signal), which is chosen by the intent of the user's words; other transitions wait until the step is done; `when: zawsze` (always) is taken without asking the model; a step without transitions ends the scenario;
+- `transitions` – `when` (a condition, in Polish) and `goto` (a step) or `handoff` (`scenario/step`); an optional `interrupt: true` marks a branch for an event (e.g. "the person stopped breathing", "the AED has arrived") that may be taken in the middle of a step, before all its instructions were said: the server asks the model about it every turn of the step; an optional `obstacle: true` (implies `interrupt`) marks the branch for a phone problem (no signal), which is chosen by the intent of the user's words; other transitions wait until the step is done; `when: zawsze` (always) is taken without asking the model; an optional `log` is the code of an `observation` written to the event log when the branch is taken because of what the rescuer said (not allowed on `zawsze`, nothing was said then); a step without transitions ends the scenario;
 - `sources` – optional citations, see below;
 - `note` – where the step goes beyond the guideline, for reviewers. A note that needs a medical reviewer's decision starts with `NEEDS MEDICAL REVIEW:` and has the labelled parts `UNCERTAIN:` (what exactly), `WHY:` (why it is uncertain) and `ERC:` (what the guideline does say); the same marker opens the comments at the top of a file; list them all with `grep -rn "NEEDS MEDICAL REVIEW" knowledge/scenarios`.
 

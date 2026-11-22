@@ -354,3 +354,82 @@ def test_the_tourniquet_is_called_staza_not_staz() -> None:
     # "staż" is an internship; the Polish word for the tourniquet is "staza".
     for path in (KNOWLEDGE / "scenarios").glob("*.yaml"):
         assert not re.search(r"\bstaż", path.read_text(encoding="utf-8")), path.name
+
+
+def test_scenarios_log_the_actions_the_rescuers_want_to_see_afterwards() -> None:
+    bls = _scenario("adult-bls")
+    bleeding = _scenario("adult-severe-bleeding")
+
+    compressions = [i.action for i in bls.step("chest_compressions").instructions]
+    tourniquet = [i.action for i in bleeding.step("tourniquet").instructions]
+
+    assert "CHEST_COMPRESSIONS" in compressions  # how long CPR has been going on
+    assert tourniquet[0] == "APPLY_TOURNIQUET"  # how long the tourniquet has been on
+    assert "NOTE_TOURNIQUET_TIME" in tourniquet
+
+
+def test_scenarios_log_when_the_person_stops_responding() -> None:
+    choking = _scenario("adult-choking")
+    logs = [t.log for step in choking.steps for t in step.transitions if t.goto == "unresponsive"]
+
+    assert logs and set(logs) == {"UNRESPONSIVE"}
+
+
+def test_a_dictionary_entry_is_an_action_unless_it_is_marked_as_an_observation() -> None:
+    actions = {a.code: a for a in load_knowledge(KNOWLEDGE).actions}
+
+    assert actions["CHEST_COMPRESSIONS"].kind == "action"
+    assert actions["UNRESPONSIVE"].kind == "observation"
+
+
+def test_an_instruction_may_log_only_an_action_of_its_step(kb_copy: Path) -> None:
+    _edit_scenario(
+        kb_copy,
+        "adult-bls",
+        lambda d: d["steps"][2]["instructions"][0].update(action="CHEST_COMPRESSIONS"),
+    )
+
+    with pytest.raises(KnowledgeError, match="not among the actions of the step"):
+        load_knowledge(kb_copy)
+
+
+def test_an_instruction_cannot_log_an_observation(kb_copy: Path) -> None:
+    def make_observation(d: dict[str, Any]) -> None:
+        d["steps"][2]["actions"].append("UNRESPONSIVE")
+        d["steps"][2]["instructions"][0]["action"] = "UNRESPONSIVE"
+
+    _edit_scenario(kb_copy, "adult-bls", make_observation)
+
+    with pytest.raises(KnowledgeError, match="is an observation, not an action"):
+        load_knowledge(kb_copy)
+
+
+def test_an_unknown_action_in_an_instruction_is_rejected(kb_copy: Path) -> None:
+    _edit_scenario(
+        kb_copy, "adult-bls", lambda d: d["steps"][2]["instructions"][0].update(action="NOPE")
+    )
+
+    with pytest.raises(KnowledgeError, match="unknown action 'NOPE'"):
+        load_knowledge(kb_copy)
+
+
+def test_a_transition_may_log_only_an_observation(kb_copy: Path) -> None:
+    _edit_scenario(
+        kb_copy,
+        "adult-bls",
+        lambda d: d["steps"][0]["transitions"][0].update(log="CHEST_COMPRESSIONS"),
+    )
+
+    with pytest.raises(KnowledgeError, match="is not an observation of the dictionary"):
+        load_knowledge(kb_copy)
+
+
+def test_an_unconditional_transition_cannot_log(kb_copy: Path) -> None:
+    def log_zawsze(d: dict[str, Any]) -> None:
+        step = next(s for s in d["steps"] if s["id"] == "breathing_normally")
+        step["transitions"][0]["log"] = "UNRESPONSIVE"
+
+    _edit_scenario(kb_copy, "adult-bls", log_zawsze)
+
+    with pytest.raises(KnowledgeError, match="cannot log"):
+        load_knowledge(kb_copy)

@@ -30,8 +30,10 @@ start: safety
 
 steps:
   - id: safety
+    actions: [CHECK_SAFETY]
     instructions:
-      - Upewnij się, że Ty i poszkodowany jesteście bezpieczni, na przykład że nie zagraża Wam ruch uliczny, rozlane substancje albo agresywna osoba.
+      - text: Upewnij się, że Ty i poszkodowany jesteście bezpieczni, na przykład że nie zagraża Wam ruch uliczny, rozlane substancje albo agresywna osoba.
+        action: CHECK_SAFETY
     transitions:
       - when: jest bezpiecznie
         goto: call_emergency
@@ -62,10 +64,11 @@ steps:
       rescuer's hands free for the pressure; if the call is not possible the scenario goes straight
       on and never sends the rescuer away from the person.
     instructions:
-      - Jeśli ktoś jest z Tobą, poproś, żeby zadzwonił pod dziewięćset dziewięćdziesiąt dziewięć. Jeśli jesteś sam, zadzwoń sam.
+      - text: Jeśli ktoś jest z Tobą, poproś, żeby zadzwonił pod dziewięćset dziewięćdziesiąt dziewięć. Jeśli jesteś sam, zadzwoń sam.
+        action: CALL_EMERGENCY
       - Włącz w telefonie tryb głośnomówiący, żeby mieć wolne ręce.
     transitions:
-      - when: wezwano pomoc (ktoś dzwoni albo rozmówca rozmawia z dyspozytorem)
+      - when: zawsze  # the call was confirmed by the first instruction; "ok" after the speakerphone one goes on
         goto: direct_pressure
       - when: rozmówca nie może zadzwonić (brak zasięgu lub sieci, brak telefonu)
         goto: direct_pressure
@@ -87,19 +90,23 @@ steps:
       ERC: Control of life-threatening bleeding (direct manual pressure preferred over pressure
         points and pressure devices).
     instructions:
-      - Mocno uciśnij dłonią ranę, w miejscu krwawienia.
-      - Jeśli masz opatrunek, zwykły albo hemostatyczny, włóż go bezpośrednio w ranę i mocno uciśnij go dłonią od góry.
+      - text: Mocno uciśnij dłonią ranę, w miejscu krwawienia.
+        action: DIRECT_PRESSURE
+      - text: Jeśli masz opatrunek, zwykły albo hemostatyczny, włóż go bezpośrednio w ranę i mocno uciśnij go dłonią od góry.
+        action: APPLY_DRESSING
       - Nie przestawaj uciskać.
     asks: Czy krwawienie ustało albo jest pod kontrolą?
     transitions:
       - when: krwawienie ustało albo jest pod kontrolą
         goto: pressure_dressing
+        log: BLEEDING_CONTROLLED
       - when: krwawienie trwa, a rana jest na ręce albo nodze
         goto: tourniquet_check
       - when: krwawienie trwa, a rana jest na tułowiu, szyi albo głowie
         goto: keep_pressing
       - when: poszkodowany przestał reagować
         handoff: adult-bls/check_response
+        log: UNRESPONSIVE
         interrupt: true
     sources:
       - {source: erc-2025-first-aid, section: Control of life-threatening bleeding}
@@ -114,15 +121,18 @@ steps:
         dispatcher if they do not know how.
       ERC: Control of life-threatening bleeding.
     instructions:
-      - Gdy krwawienie jest pod kontrolą, załóż opatrunek uciskowy. Jeśli nie wiesz, jak go założyć, dalej uciskaj ranę i poproś o pomoc dyspozytora.
+      - text: Gdy krwawienie jest pod kontrolą, załóż opatrunek uciskowy. Jeśli nie wiesz, jak go założyć, dalej uciskaj ranę i poproś o pomoc dyspozytora.
+        action: APPLY_PRESSURE_DRESSING
     transitions:
       - when: opatrunek uciskowy założony
         goto: after_bleeding
       - when: krwawienie wróciło
         goto: direct_pressure
+        log: BLEEDING_RETURNED
         interrupt: true
       - when: poszkodowany przestał reagować
         handoff: adult-bls/check_response
+        log: UNRESPONSIVE
         interrupt: true
     sources:
       - {source: erc-2025-first-aid, section: Control of life-threatening bleeding}
@@ -149,6 +159,7 @@ steps:
         goto: keep_pressing
       - when: poszkodowany przestał reagować
         handoff: adult-bls/check_response
+        log: UNRESPONSIVE
         interrupt: true
     sources:
       - {source: erc-2025-first-aid, section: Control of life-threatening bleeding}
@@ -166,19 +177,23 @@ steps:
         not over a joint) and writing the time are from the text.
       ERC: Control of life-threatening bleeding (Tourniquets).
     instructions:
-      - Załóż opaskę na kończynę, około pięciu do siedmiu centymetrów powyżej rany, ale nie na stawie.
+      - text: Załóż opaskę na kończynę, około pięciu do siedmiu centymetrów powyżej rany, ale nie na stawie.
+        action: APPLY_TOURNIQUET
       - Zaciągaj opaskę, aż krwawienie zwolni i ustanie. Może to być bolesne dla poszkodowanego.
-      - Zapisz na opasce godzinę jej założenia.
+      - text: Zapisz na opasce godzinę jej założenia.
+        action: NOTE_TOURNIQUET_TIME
       - Nie zdejmuj ani nie poluzowuj opaski. Może to zrobić tylko pracownik ochrony zdrowia.
       - Jeśli krwawienie nie ustaje, załóż drugą opaskę powyżej pierwszej.
     asks: Czy krwawienie ustało albo wyraźnie zwolniło?
     transitions:
       - when: krwawienie ustało albo wyraźnie zwolniło
         goto: after_bleeding
+        log: BLEEDING_CONTROLLED
       - when: krwawienie trwa mimo opaski
         goto: keep_pressing
       - when: poszkodowany przestał reagować
         handoff: adult-bls/check_response
+        log: UNRESPONSIVE
         interrupt: true
     sources:
       - {source: erc-2025-first-aid, section: Control of life-threatening bleeding}
@@ -186,12 +201,15 @@ steps:
   - id: keep_pressing
     actions: [DIRECT_PRESSURE]
     instructions:
-      - Dalej mocno uciskaj ranę i nie puszczaj. Słuchaj poleceń dyspozytora.
+      - text: Dalej mocno uciskaj ranę i nie puszczaj. Słuchaj poleceń dyspozytora.
+        action: DIRECT_PRESSURE
     transitions:
       - when: krwawienie ustało albo jest pod kontrolą
         goto: pressure_dressing
+        log: BLEEDING_CONTROLLED
       - when: poszkodowany przestał reagować
         handoff: adult-bls/check_response
+        log: UNRESPONSIVE
         interrupt: true
     sources:
       - {source: erc-2025-first-aid, section: Control of life-threatening bleeding}
@@ -211,9 +229,11 @@ steps:
     transitions:
       - when: krwawienie wróciło
         goto: direct_pressure
+        log: BLEEDING_RETURNED
         interrupt: true
       - when: poszkodowany przestał reagować
         handoff: adult-bls/check_response
+        log: UNRESPONSIVE
         interrupt: true
     sources:
       - {source: erc-2025-first-aid, section: Control of life-threatening bleeding}

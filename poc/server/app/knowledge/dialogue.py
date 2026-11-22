@@ -14,6 +14,12 @@ The model normally writes the answer from the task of the turn. In the verbatim 
 (`verbatim=True`) it never does: the answer is the exact text of the scenario (or a fixed phrase
 of `prompts/scenario_v1.yaml`, see `spoken`) and the model only classifies the user's words.
 
+The same pass fills the event log, without any model call of its own (`logged`): when the user
+confirms an instruction that asks for an action (`action` in the scenario) that action is logged,
+and when a branch with a `log` is taken because of what the user said, that observation is. A
+confirmation is the intent the dialogue computes anyway, so the log costs nothing extra and records
+only what the scenario asked for and the user answered.
+
 The cursor moves only after an answer was completed, so an interrupted answer is said again.
 The state lives as long as the object, i.e. one WebSocket connection.
 """
@@ -29,7 +35,8 @@ from app.providers.base import LLMProvider, Message
 _USER_MESSAGES_FOR_ROUTING = 3
 _DIGIT = re.compile(r"\W*(\d+)")
 _OBSTACLE, _OTHER = "PRZESZKODA", "INNE"  # labels of the intent call
-_INTENT_LABELS = ("POTWIERDZENIE", _OBSTACLE, _OTHER)
+_CONFIRMATION = "POTWIERDZENIE"
+_INTENT_LABELS = (_CONFIRMATION, _OBSTACLE, _OTHER)
 _REPEATS_BEFORE_ASKING = 2
 
 
@@ -76,11 +83,21 @@ class ScenarioDialogue:
         self._repeats = 0  # consecutive turns in which the last instruction was repeated
         self._interjected = False  # the previous turn answered a problem instead of moving on
         self._media: str | None = None
+        # Words that announce an action instead of reporting it ("zaraz zadzwonię"): not logged.
+        self._announcement = re.compile(prompts.announcement, re.IGNORECASE)
+        self._logged: list[str] = []  # event log codes of this turn (see `logged`)
+        self._observed: list[str] = []  # codes of the branches taken in this turn
 
     @property
     def media(self) -> str | None:
         """Picture of the current turn's instruction (set by `begin_turn`); None without one."""
         return self._media
+
+    @property
+    def logged(self) -> list[str]:
+        """Event log codes of this turn, in order (set by `begin_turn`): the confirmed action
+        first, then the observations of the branches taken."""
+        return list(self._logged)
 
     @property
     def spoken(self) -> str | None:
@@ -95,6 +112,8 @@ class ScenarioDialogue:
         self._spoken = None
         self._advance_on_completion = False
         self._moved = False
+        self._logged = []
+        self._observed = []
         was_interjected, self._interjected = self._interjected, False
         interject = False
         if self._step is None:
@@ -103,14 +122,33 @@ class ScenarioDialogue:
             # Something was said in this step, so the user is reacting to it. A confirmation lets
             # the cursor go on; a problem may call for a transition (e.g. no phone signal); a
             # problem or a question outside the procedure is answered without moving on.
+            confirmed = self._confirmed_action()  # before the cursor moves
             intent = await self._intent(user_text, history)
             exhausted = self._unit >= len(self._step.units)
+            raw_intent = intent
             if intent == _OTHER and "?" not in user_text:
                 intent = ""  # a statement ("I am afraid") is not a question: the procedure goes on
             if intent == _OBSTACLE or (exhausted and intent != _OTHER):
-                await self._follow_transition(user_text, history, interrupting=not exhausted)
+                await self._follow_transition(
+                    user_text,
+                    history,
+                    interrupting=not exhausted,
+                    obstacle=intent == _OBSTACLE,
+                )
+            event_taken = False
             if not self._moved:
-                await self._follow_event(user_text, history)
+                event_taken = await self._follow_event(user_text, history)
+            # The user confirmed what was asked, so the action is logged. Not when they reported
+            # an event instead ("the AED has arrived" is no confirmation of the last instruction),
+            # and not when the words only announce the action.
+            if (
+                confirmed is not None
+                and raw_intent == _CONFIRMATION
+                and not event_taken
+                and not self._announcement.search(user_text)
+            ):
+                self._logged.append(confirmed)
+            self._logged.extend(self._observed)
             # A problem or a question outside the procedure is sent to the dispatcher only once in
             # a row; if the user keeps raising them, the procedure goes on.
             interject = not self._moved and intent in (_OBSTACLE, _OTHER) and not was_interjected
@@ -189,12 +227,20 @@ class ScenarioDialogue:
         label = word.group(1).upper() if word else ""
         return label if label in _INTENT_LABELS else ""
 
-    async def _follow_event(self, user_text: str, history: list[Message]) -> None:
+    def _confirmed_action(self) -> str | None:
+        """The action asked for by the instruction that the user is answering now, if any."""
+        assert self._step is not None
+        index = min(self._unit, len(self._step.units)) - 1
+        if 0 <= index < len(self._step.instructions):
+            return self._step.instructions[index].action
+        return None  # the question (`asks`) asks for an answer, not for an action
+
+    async def _follow_event(self, user_text: str, history: list[Message]) -> bool:
         """Takes an `interrupt` branch if the user just reported its event (any turn of a step)."""
         assert self._step is not None
         events = [t for t in self._step.transitions if t.interrupt and not t.obstacle]
         if not events:
-            return
+            return False
         last_assistant = next((m.content for m in reversed(history) if m.role == "assistant"), "")
         prompt = self._prompts.route_event.format(
             assistant=_one_line(last_assistant),
@@ -204,12 +250,22 @@ class ScenarioDialogue:
         choice = await self._choose(prompt, len(events))
         if choice:
             self._take(events[choice - 1])
+        return bool(choice)
 
     async def _follow_transition(
-        self, user_text: str, history: list[Message], *, interrupting: bool = False
+        self,
+        user_text: str,
+        history: list[Message],
+        *,
+        interrupting: bool = False,
+        obstacle: bool = False,
     ) -> None:
         assert self._step is not None
-        transitions = [t for t in self._step.transitions if t.obstacle or not interrupting]
+        # The branches for an obstacle (no phone signal) are chosen by the intent of the words and
+        # only then; for any other words they are not candidates, so a step whose only other
+        # branch is `when: zawsze` has nothing left to ask the model about.
+        wants_obstacle = interrupting or obstacle
+        transitions = [t for t in self._step.transitions if t.obstacle == wants_obstacle]
         if not transitions:
             return
         if len(transitions) == 1 and transitions[0].unconditional:
@@ -217,7 +273,7 @@ class ScenarioDialogue:
             # a condition made it answer "none", and the dialogue got stuck repeating the step.
             self._take(transitions[0])
             return
-        if interrupting and len(transitions) == 1:
+        if wants_obstacle and len(transitions) == 1:
             # The intent call already judged the words an obstacle and this is the only branch
             # for one: asking the model to pick a number again only adds noise.
             self._take(transitions[0])
@@ -234,6 +290,8 @@ class ScenarioDialogue:
         self._take(transitions[choice - 1])
 
     def _take(self, chosen: Transition) -> None:
+        if chosen.log is not None:
+            self._observed.append(chosen.log)
         if chosen.goto is not None:
             assert self._scenario is not None
             self._enter(self._scenario, chosen.goto)

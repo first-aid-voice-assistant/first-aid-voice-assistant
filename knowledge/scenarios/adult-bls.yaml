@@ -23,8 +23,10 @@ start: safety
 steps:
   - id: safety
     media: cpr/scene-safety
+    actions: [CHECK_SAFETY]
     instructions:
-      - Upewnij się, że Ty, poszkodowany i świadkowie jesteście bezpieczni.
+      - text: Upewnij się, że Ty, poszkodowany i świadkowie jesteście bezpieczni.
+        action: CHECK_SAFETY
     transitions:
       - when: jest bezpiecznie
         goto: check_response
@@ -54,10 +56,12 @@ steps:
     media: cpr/shake-shoulders
     actions: [CHECK_RESPONSE]
     instructions:
-      - Delikatnie potrząśnij poszkodowanego za ramiona i głośno zapytaj, czy wszystko w porządku.
+      - text: Delikatnie potrząśnij poszkodowanego za ramiona i głośno zapytaj, czy wszystko w porządku.
+        action: CHECK_RESPONSE
     transitions:
       - when: poszkodowany nie reaguje
         goto: call_emergency
+        log: UNRESPONSIVE
       - when: poszkodowany reaguje (odpowiada, rusza się)
         goto: responsive
     sources:
@@ -96,12 +100,11 @@ steps:
     instructions:
       - text: Jeśli ktoś jest z Tobą, poproś, żeby zadzwonił pod dziewięćset dziewięćdziesiąt dziewięć. Jeśli jesteś sam, zadzwoń sam.
         media: cpr/call-112
+        action: CALL_EMERGENCY
       - text: Włącz w telefonie tryb głośnomówiący, żeby móc zacząć RKO w trakcie rozmowy z dyspozytorem. Jeśli to możliwe, zostań z poszkodowanym.
         media: cpr/speakerphone
     transitions:
-      - when: >-
-          wezwano pomoc (ktoś dzwoni, rozmówca rozmawia z dyspozytorem albo czeka, aż dyspozytor
-          odbierze)
+      - when: zawsze  # the call was confirmed by the first instruction; "ok" after the speakerphone one goes on
         goto: check_breathing
       - when: rozmówca nie może zadzwonić (brak zasięgu lub sieci, brak telefonu)
         goto: check_breathing
@@ -124,14 +127,17 @@ steps:
         media: cpr/lay-on-back
       - text: Jedną rękę połóż na jego czole, a opuszki palców drugiej pod brodą. Delikatnie odegnij głowę do tyłu i unieś brodę.
         media: cpr/head-tilt
+        action: OPEN_AIRWAY
       - text: Przez nie dłużej niż dziesięć sekund patrz, słuchaj i staraj się wyczuć, czy poszkodowany oddycha.
         media: cpr/check-breathing
+        action: CHECK_BREATHING
     asks: Czy poszkodowany oddycha prawidłowo?
     transitions:
       - when: >-
           nie oddycha, oddycha nieprawidłowo (łapie powietrze, dyszy, oddycha bardzo powoli albo
           z wysiłkiem, charczy, chrapie, jęczy) albo rozmówca nie ma pewności
         goto: chest_compressions
+        log: BREATHING_ABNORMAL
       - when: oddycha prawidłowo
         goto: breathing_normally
     sources:
@@ -169,6 +175,7 @@ steps:
         media: cpr/compressions
       - text: Uciskaj mostek na głębokość co najmniej pięciu, ale nie więcej niż sześciu centymetrów, w tempie od stu do stu dwudziestu uciśnięć na minutę.
         media: cpr/compressions
+        action: CHEST_COMPRESSIONS
       - text: Po każdym uciśnięciu pozwól klatce piersiowej całkowicie wrócić do pozycji wyjściowej, nie opierając się na niej, ale nie odrywaj dłoni od klatki.
         media: cpr/compressions
     transitions:
@@ -192,6 +199,7 @@ steps:
     instructions:
       - text: Jeśli ktoś jest z Tobą, poproś, żeby przyniósł AED, czyli defibrylator, jeśli jest w pobliżu.
         media: cpr/aed
+        action: SEND_FOR_AED
       - text: Jeśli jesteś sam, nie przerywaj uciśnięć i nie szukaj AED.
         media: cpr/compressions
     asks: Czy umiesz wykonywać oddechy ratownicze?
@@ -209,19 +217,22 @@ steps:
     media: cpr/compressions
     actions: [CHEST_COMPRESSIONS]
     instructions:
-      - Prowadź RKO wyłącznie z uciskaniem klatki piersiowej, czyli uciskaj bez przerw, w tempie od stu do stu dwudziestu uciśnięć na minutę.
+      - text: Prowadź RKO wyłącznie z uciskaniem klatki piersiowej, czyli uciskaj bez przerw, w tempie od stu do stu dwudziestu uciśnięć na minutę.
+        action: CHEST_COMPRESSIONS
       - Kontynuuj, dopóki nie przyjedzie pomoc i nie przejmie czynności albo nie każe Ci przestać.
     transitions:
       - when: >-
           AED jest na miejscu i nie jest jeszcze podłączony (ktoś go przyniósł albo rozmówca ma
           go przy sobie)
         goto: aed_attach
+        log: AED_ARRIVED
         interrupt: true
       - when: AED jest już podłączony i prosi o przerwę w uciskaniu, żeby ocenić rytm
         goto: aed_analyse
         interrupt: true
       - when: przyjechała pomoc (ratownicy, zespół ratunkowy) i przejęła czynności, albo ratownik lub dyspozytor każe przestać, albo poszkodowany w oczywisty sposób odzyskuje przytomność (porusza się, otwiera oczy, prawidłowo oddycha), albo rozmówca jest zbyt zmęczony
         goto: end_cpr
+        log: CPR_STOPPED
     note: |-
       NEEDS MEDICAL REVIEW:
       UNCERTAIN: The conditions for stopping CPR: (1) obvious signs of recovery (moves, opens
@@ -242,7 +253,8 @@ steps:
     media: cpr/compressions
     actions: [CHEST_COMPRESSIONS]
     instructions:
-      - Wykonaj trzydzieści uciśnięć klatki piersiowej, tak jak przed chwilą.
+      - text: Wykonaj trzydzieści uciśnięć klatki piersiowej, tak jak przed chwilą.
+        action: CHEST_COMPRESSIONS
     transitions:
       - when: wykonano trzydzieści uciśnięć
         goto: rescue_breaths
@@ -250,12 +262,14 @@ steps:
           AED jest na miejscu i nie jest jeszcze podłączony (ktoś go przyniósł albo rozmówca ma
           go przy sobie)
         goto: aed_attach
+        log: AED_ARRIVED
         interrupt: true
       - when: AED jest już podłączony i prosi o przerwę w uciskaniu, żeby ocenić rytm
         goto: aed_analyse
         interrupt: true
       - when: przyjechała pomoc (ratownicy, zespół ratunkowy) i przejęła czynności, albo ratownik lub dyspozytor każe przestać, albo poszkodowany w oczywisty sposób odzyskuje przytomność (porusza się, otwiera oczy, prawidłowo oddycha), albo rozmówca jest zbyt zmęczony
         goto: end_cpr
+        log: CPR_STOPPED
     note: |-
       NEEDS MEDICAL REVIEW:
       UNCERTAIN: The same stopping conditions as in `compressions_only`.
@@ -280,10 +294,12 @@ steps:
     instructions:
       - text: Ponownie udrożnij drogi oddechowe, odginając głowę do tyłu i unosząc brodę. Palcem wskazującym i kciukiem ręki, która jest na czole, zaciśnij skrzydełka nosa poszkodowanego.
         media: cpr/pinch-nose
+        action: OPEN_AIRWAY
       - text: Pozwól, żeby usta poszkodowanego się otworzyły, ale trzymaj brodę uniesioną. Weź normalny wdech i szczelnie obejmij swoimi ustami usta poszkodowanego.
         media: cpr/rescue-breath
       - text: Wdmuchuj powietrze jednostajnie, przez około jedną sekundę, obserwując, czy klatka piersiowa się unosi. Wdmuchnij tylko tyle powietrza, żeby klatka zaczęła się unosić.
         media: cpr/rescue-breath
+        action: RESCUE_BREATHS
       - text: Odsuń usta i obserwuj, jak klatka piersiowa opada. Weź kolejny normalny wdech i wykonaj drugi oddech ratowniczy.
         media: cpr/rescue-breath
       - text: Nie przerywaj uciśnięć dłużej niż dziesięć sekund na dwa oddechy, nawet jeśli któryś z nich byłby nieskuteczny. Bez opóźnienia wróć dłońmi na mostek i wykonaj kolejne trzydzieści uciśnięć. Kontynuuj w stosunku trzydzieści uciśnięć do dwóch oddechów.
@@ -314,6 +330,7 @@ steps:
         media: cpr/aed
       - text: Odsłoń klatkę piersiową poszkodowanego i przyklej elektrody w miejscach pokazanych na urządzeniu lub na elektrodach.
         media: cpr/aed
+        action: AED_ATTACH
       - text: Dalej wykonuj polecenia głosowe AED.
         media: cpr/aed
     transitions:
@@ -342,6 +359,7 @@ steps:
         media: cpr/aed
       - text: Jeśli AED każe nacisnąć przycisk wyładowania, naciśnij go. Niektóre urządzenia wykonują wyładowanie same.
         media: cpr/aed
+        action: AED_SHOCK
       - text: Zaraz po wyładowaniu natychmiast wróć do uciskania klatki piersiowej.
         media: cpr/compressions
     transitions:
@@ -359,6 +377,7 @@ steps:
     instructions:
       - text: Natychmiast uciskaj klatkę piersiową, tak jak wcześniej.
         media: cpr/compressions
+        action: CHEST_COMPRESSIONS
       - text: Dalej wykonuj polecenia AED. Po jakimś czasie poprosi o przerwę w uciskaniu, żeby ponownie ocenić rytm serca.
         media: cpr/compressions
     asks: Czy umiesz wykonywać oddechy ratownicze?

@@ -1,5 +1,10 @@
-# Dictionary of rescue actions. The codes are shared with the event log and the reference logs
-# in eval/. Synonyms are colloquial phrases a rescuer may say; names and synonyms are Polish.
+# Dictionary of the event log: rescue actions and observations. The codes are shared with the event
+# log and the reference logs in eval/. Names and synonyms are Polish.
+#
+# `kind: action` (the default) is something the rescuer does: it is logged when the rescuer confirms
+# the instruction (`action` in a scenario) that asked for it. `kind: observation` is a change in the
+# situation: it is logged when a scenario branch (`log` in a transition) is taken because of what the
+# rescuer reported. Synonyms are colloquial phrases a rescuer may say.
 actions:
   - code: CHECK_SAFETY
     name: Ocena bezpieczeństwa miejsca zdarzenia
@@ -100,3 +105,40 @@ actions:
     name: Zapisanie godziny założenia opaski uciskowej
     level: layperson
     synonyms: [zapisuję godzinę, notuję godzinę założenia opaski]
+
+  # Observations: what the rescuer reported about the person or the equipment. For the people who
+  # take over: when the person stopped responding, when the breathing went wrong, when the AED came.
+  - code: UNRESPONSIVE
+    name: Poszkodowany nie reaguje albo przestał reagować (utrata przytomności)
+    level: layperson
+    kind: observation
+
+  - code: BREATHING_ABNORMAL
+    name: Poszkodowany nie oddycha albo oddycha nieprawidłowo
+    level: layperson
+    kind: observation
+
+  - code: AED_ARRIVED
+    name: AED jest na miejscu
+    level: layperson
+    kind: observation
+
+  - code: CPR_STOPPED
+    name: Zakończenie RKO (pomoc przejęła akcję, polecenie przerwania albo powrót oznak życia)
+    level: layperson
+    kind: observation
+
+  - code: OBSTRUCTION_CLEARED
+    name: Przeszkoda w drogach oddechowych usunięta, poszkodowany oddycha i mówi
+    level: layperson
+    kind: observation
+
+  - code: BLEEDING_CONTROLLED
+    name: Krwawienie ustało albo jest pod kontrolą
+    level: layperson
+    kind: observation
+
+  - code: BLEEDING_RETURNED
+    name: Krwawienie wróciło
+    level: layperson
+    kind: observation

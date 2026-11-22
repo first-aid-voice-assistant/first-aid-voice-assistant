@@ -46,6 +46,7 @@ def _check_references(kb: KnowledgeBase) -> None:
     problems: list[str] = []
     sections = {s.id: set(s.sections) for s in kb.sources}
     action_codes = [a.code for a in kb.actions]
+    observations = {a.code: a.kind == "observation" for a in kb.actions}
     scenarios = {s.id: s for s in kb.scenarios}
 
     _duplicates(problems, "source", [s.id for s in kb.sources])
@@ -64,6 +65,23 @@ def _check_references(kb: KnowledgeBase) -> None:
             for code in step.actions:
                 if code not in action_codes:
                     problems.append(f"{where}: unknown action '{code}'")
+            for i, instruction in enumerate(step.instructions, 1):
+                if instruction.action is None:
+                    continue
+                if instruction.action not in action_codes:
+                    problems.append(
+                        f"{where}: instruction {i} has unknown action '{instruction.action}'"
+                    )
+                elif instruction.action not in step.actions:
+                    problems.append(
+                        f"{where}: instruction {i} logs '{instruction.action}', "
+                        "which is not among the actions of the step"
+                    )
+                elif observations.get(instruction.action):
+                    problems.append(
+                        f"{where}: instruction {i} logs '{instruction.action}', "
+                        "which is an observation, not an action"
+                    )
             # Citations are checked only when source descriptions are present (the sources
             # folder may be empty while the procedures are still being drafted).
             for ref in step.sources if sections else []:
@@ -74,6 +92,13 @@ def _check_references(kb: KnowledgeBase) -> None:
                         f"{where}: section '{ref.section}' is not listed in source '{ref.source}'"
                     )
             for tr in step.transitions:
+                if tr.log is not None and not observations.get(tr.log):
+                    problems.append(
+                        f"{where}: transition logs '{tr.log}', which is not an observation "
+                        "of the dictionary"
+                    )
+                if tr.log is not None and tr.when.strip().lower() == "zawsze":
+                    problems.append(f"{where}: a `when: zawsze` transition cannot log '{tr.log}'")
                 if tr.goto is not None and tr.goto not in step_ids:
                     problems.append(f"{where}: transition to unknown step '{tr.goto}'")
                 if tr.handoff is not None:
