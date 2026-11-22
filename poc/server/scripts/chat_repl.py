@@ -35,6 +35,8 @@ async def _ask(ws: ClientConnection, ask_id: str, text: str, history: list[dict[
         if event.get("id") not in (ask_id, None):
             continue
         match event["type"]:
+            case "step":
+                print(f"[{event['media'] or 'bez obrazka'}] ", end="", flush=True)
             case "delta":
                 print(event["text"], end="", flush=True)
             case "done":

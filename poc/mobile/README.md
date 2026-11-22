@@ -113,6 +113,6 @@ lib/
 test/                         # tests mirroring lib/ (ui/, data/, utils/); fakes/ – fake services shared by the tests
 ```
 
-Other folders: `android/`, `ios/` (platform projects: microphone permission, SDK 37.0, ProGuard rules for Vosk, iOS 15.6), `docs/` (architecture, conventions), `pubspec.yaml` (dependencies: sherpa_onnx, vosk_flutter_service, whisper_cpp_flutter_plus, record, flutter_tts, audioplayers, web_socket_channel, shared_preferences, path_provider, archive, crypto).
+Other folders: `android/`, `ios/` (platform projects: microphone permission, dialer query for the 112 button, SDK 37.0, ProGuard rules for Vosk, iOS 15.6), `assets/illustrations/` (step illustrations, SVG, drawn for the project), `docs/` (architecture, conventions), `pubspec.yaml` (dependencies: sherpa_onnx, vosk_flutter_service, whisper_cpp_flutter_plus, record, flutter_tts, audioplayers, web_socket_channel, shared_preferences, path_provider, archive, crypto, flutter_svg, url_launcher).
 
 Working rules: [AGENTS.md](AGENTS.md) and the project-wide [AGENTS.md](../../AGENTS.md).

@@ -11,7 +11,7 @@ All commands below are run from `poc/server/`.
 - Modular monolith (FastAPI) – one `app` container.
 - Open-source models in separate containers (Ollama/vLLM, faster-whisper server), enabled via compose profiles.
 - Commercial models behind the same provider interfaces (LiteLLM adapter).
-- API: `GET /health`, `GET /v1/providers`, `WS /v1/chat` (the mobile app's chat: the answer is streamed and can be cancelled; the app sends the conversation history with every question) and the dev-only `POST /dev/chat` for testing the LLM with ready-made transcripts.
+- API: `GET /health`, `GET /v1/providers`, `WS /v1/chat` (the mobile app's chat: the answer is streamed and can be cancelled; the app sends the conversation history with every question; with the scenarios on, a `step` event first names the picture of the current instruction) and the dev-only `POST /dev/chat` for testing the LLM with ready-made transcripts.
 - No audio/ASR on the server: speech is recognised on the phone.
 - The first-aid scenarios from `knowledge/` (adult BLS, choking) guide the conversation (`knowledge.enabled`): the server keeps the position in the scenario per WebSocket connection and gives the model one instruction per turn. RAG is disabled (`rag.enabled: false`), Qdrant sits behind the `rag` profile.
 

@@ -108,6 +108,9 @@ class AssistantRepository {
       return;
     }
     switch (event) {
+      case ServerStep(:final media):
+        answer.events.add(AnswerStep(media));
+        _armTimeout(answer);
       case ServerDelta(:final text):
         answer.events.add(AnswerDelta(text));
         _armTimeout(answer);

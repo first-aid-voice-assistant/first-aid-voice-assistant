@@ -44,6 +44,7 @@ sealed class ServerEvent {
     }
     final id = json['id'] as String?;
     return switch (json['type']) {
+      'step' => ServerStep(id: id, media: json['media'] as String?),
       'delta' => ServerDelta(id: id, text: json['text'] as String),
       'done' => ServerDone(
         id: id,
@@ -56,6 +57,12 @@ sealed class ServerEvent {
       final type => throw FormatException('Unknown server event: $type'),
     };
   }
+}
+
+class ServerStep extends ServerEvent {
+  const ServerStep({required String? id, required this.media}) : super(id);
+
+  final String? media;
 }
 
 class ServerDelta extends ServerEvent {

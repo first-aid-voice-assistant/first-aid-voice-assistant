@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 300">
+  <path d="M16 266 L504 266" fill="none" stroke="#B8C2CC" stroke-width="2"/>
+  <g transform="translate(-10 60) scale(0.78)">
+
+  <path d="M150 266 Q166 226 196 204 L222 146 L236 160 Q258 176 286 192 L282 266 Z" fill="#E3C3A6"/>
+  <path d="M282 266 L282 196 Q300 178 330 160 Q372 138 430 134 Q520 130 700 136 L700 266 Z" fill="#6C8EBF" stroke="#2A3441" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M290 192 Q300 206 318 202" fill="none" stroke="#2A3441" stroke-width="1.6" stroke-linecap="round"/>
+
+  <path d="M112 264 Q68 254 66 210 Q64 170 96 150 Q118 136 140 136 Q150 140 156 138 L172 114 Q178 108 182 116 L184 130 Q190 131 192 136 Q197 136 199 140 Q204 138 208 141 Q218 138 226 147 Q234 156 234 160 Q256 176 286 192 L282 196 L282 266 Z" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M112 264 Q68 254 66 210 Q64 170 96 150 Q104 145 114 142 Q88 168 92 206 Q96 240 140 264 Z" fill="#7A5C45"/>
+  <ellipse cx="150" cy="206" rx="11" ry="15" transform="rotate(-20 150 206)" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8"/>
+  <path d="M148 198 Q142 206 148 214" fill="none" stroke="#2A3441" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M126 146 Q137 141 148 145" fill="none" stroke="#2A3441" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M131 156 Q140 161 149 156" fill="none" stroke="#2A3441" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M177 124 Q181 128 186 126" fill="none" stroke="#2A3441" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M199 141 L202 150" fill="none" stroke="#2A3441" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M-30 20 L50 92" fill="none" stroke="#C8423B" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M50 92 L96 132" fill="none" stroke="#E3C3A6" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M260 80 Q270 12 196 -6 L-140 -260 L-320 -140 L108 92 Q136 116 170 106 Q220 110 260 80 Z" fill="#C8423B" stroke="#2A3441" stroke-width="1.8" stroke-linejoin="round"/>
+  <g transform="translate(200 70) rotate(12)">
+  <ellipse cx="0" cy="0" rx="52" ry="46" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8"/>
+  <path d="M-52 2 Q-54 -44 -2 -47 Q48 -48 53 -6 Q50 14 28 20 Q6 24 -12 32 Q-34 38 -52 2 Z" fill="#3A3A3A"/>
+  <ellipse cx="-38" cy="24" rx="8" ry="11" transform="rotate(30 -38 24)" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8"/>
+  <path d="M10 36 Q22 34 32 26" fill="none" stroke="#2A3441" stroke-width="1.6" stroke-linecap="round"/>
+  </g>
+  <path d="M84 128 Q112 120 132 130 Q140 136 132 144 Q110 152 86 150 Q76 140 84 128 Z" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8" stroke-linejoin="round"/>
+  </g>
+  <text x="504" y="28" text-anchor="end" font-family="sans-serif" font-size="18" font-weight="bold" fill="#2A3441">Patrz, słuchaj, wyczuwaj</text>
+  <text x="504" y="52" text-anchor="end" font-family="sans-serif" font-size="16" font-weight="bold" fill="#8A94A6">nie dłużej niż 10 sekund</text>
+</svg>

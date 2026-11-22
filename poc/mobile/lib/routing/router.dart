@@ -17,6 +17,7 @@ Route<void> buildRoute(RouteSettings route, AppDependencies dependencies) {
     builder: (context) => switch (route.name) {
       Routes.conversation => ConversationScreen(
         createViewModel: dependencies.createConversationViewModel,
+        emergencyDialer: dependencies.emergencyDialer,
       ),
       Routes.settings => SettingsScreen(
         settings: dependencies.settings,

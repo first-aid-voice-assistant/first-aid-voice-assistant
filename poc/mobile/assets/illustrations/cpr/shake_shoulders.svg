@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 300">
+  <path d="M16 272 L504 272" fill="none" stroke="#B8C2CC" stroke-width="2"/>
+  <g transform="translate(-72 0)">
+  <path d="M190 270 L194 202 Q200 176 226 180 Q242 188 238 210 L226 270 Z" fill="#2E4057"/>
+
+  <rect x="150" y="238" width="32" height="22" rx="6" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8"/>
+  <ellipse cx="128" cy="246" rx="28" ry="24" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8"/>
+  <path d="M104 254 Q98 230 118 222 Q108 238 114 266 Z" fill="#7A5C45"/>
+  <path d="M116 224 Q122 210 132 223" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M176 270 L176 236 Q184 222 210 220 Q250 214 290 222 Q330 230 360 236 L362 270 Z" fill="#6C8EBF" stroke="#2A3441" stroke-width="1.8"/>
+  <path d="M356 238 Q450 242 540 248 L540 270 L356 270 Z" fill="#44576D" stroke="#2A3441" stroke-width="1.8"/>
+  <path d="M532 248 L540 222 Q548 216 554 224 L556 268 L532 270 Z" fill="#2A3441"/>
+
+  <path d="M200 206 Q186 150 156 116 Q148 102 162 96 Q182 94 196 110 Q226 150 240 204 Z" fill="#C8423B" stroke="#2A3441" stroke-width="1.8"/>
+  <path d="M148 102 L142 88 L154 84 L162 98 Z" fill="#E3C3A6"/>
+
+  <circle cx="142" cy="74" r="19" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8"/>
+  <path d="M142 55 Q162 55 162 74 Q162 86 156 92 Q154 78 148 72 Q138 68 126 70 Q129 56 142 55 Z" fill="#3A3A3A"/>
+  <path d="M124 71 L119 78 L125 79" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8" stroke-linejoin="round"/>
+  </g>
+  <path d="M120 66 H300 Q316 66 316 82 V100 Q316 116 300 116 H130 Q114 116 114 100 V96 L94 92 L114 84 V82 Q114 66 130 66 Z" fill="#FFFFFF" stroke="#2A3441" stroke-width="1.8" stroke-linejoin="round"/>
+  <text x="215" y="98" text-anchor="middle" font-family="sans-serif" font-size="17" font-weight="bold" fill="#2A3441">Halo, słyszysz mnie?</text>
+  <text x="504" y="28" text-anchor="end" font-family="sans-serif" font-size="18" font-weight="bold" fill="#2A3441">Potrząśnij za ramiona</text>
+</svg>

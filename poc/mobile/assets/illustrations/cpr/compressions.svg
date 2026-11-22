@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 300">
+  <path d="M16 272 L504 272" fill="none" stroke="#B8C2CC" stroke-width="2"/>
+  <g transform="translate(-72 0)">
+  <path d="M280 270 L284 196 Q292 168 320 172 Q336 180 330 204 L316 270 Z" fill="#2E4057"/>
+
+  <rect x="150" y="238" width="32" height="22" rx="6" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8"/>
+  <ellipse cx="128" cy="246" rx="28" ry="24" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8"/>
+  <path d="M104 254 Q98 230 118 222 Q108 238 114 266 Z" fill="#7A5C45"/>
+  <path d="M116 224 Q122 210 132 223" fill="#E3C3A6" stroke="#2A3441" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M176 270 L176 236 Q184 222 210 220 Q250 214 290 222 Q330 230 360 236 L362 270 Z" fill="#6C8EBF" stroke="#2A3441" stroke-width="1.8"/>
+  <path d="M356 238 Q450 242 540 248 L540 270 L356 270 Z" fill="#44576D" stroke="#2A3441" stroke-width="1.8"/>
+  <path d="M532 248 L540 222 Q548 216 554 224 L556 268 L532 270 Z" fill="#2A3441"/>
+  <path d="M246 96 L246 200" fill="none" stroke="#8A94A6" stroke-width="1.5" stroke-dasharray="4 4"/>
+  </g>
+  <path d="M128 192 L128 224 M121 199 L128 192 L135 199 M121 217 L128 224 L135 217" fill="none" stroke="#C0392B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="118" y="214" text-anchor="end" font-family="sans-serif" font-size="17" font-weight="bold" fill="#C0392B">5–6 cm</text>
+  <text x="504" y="132" text-anchor="end" font-family="sans-serif" font-size="18" font-weight="bold" fill="#2A3441">Proste ręce,</text>
+  <text x="504" y="156" text-anchor="end" font-family="sans-serif" font-size="18" font-weight="bold" fill="#2A3441">barki nad dłońmi</text>
+</svg>

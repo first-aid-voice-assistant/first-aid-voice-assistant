@@ -6,6 +6,8 @@ import 'package:first_aid_voice_assistant/data/repositories/speech_input.dart';
 import 'package:first_aid_voice_assistant/data/repositories/speech_output.dart';
 import 'package:first_aid_voice_assistant/data/services/audio_output.dart';
 import 'package:first_aid_voice_assistant/data/services/chat_socket.dart';
+import 'package:first_aid_voice_assistant/data/services/emergency_dialer.dart';
+import 'package:first_aid_voice_assistant/data/services/metronome_sound.dart';
 import 'package:first_aid_voice_assistant/data/services/key_value_store.dart';
 import 'package:first_aid_voice_assistant/data/services/model_store.dart';
 import 'package:first_aid_voice_assistant/data/services/segment_decoder.dart';
@@ -351,6 +353,9 @@ class FakeChatConnection implements ChatConnection {
 
   void emit(Map<String, Object?> event) => _incoming.add(jsonEncode(event));
 
+  void step(String? media) =>
+      emit({'type': 'step', 'id': lastAsk['id'], 'media': media});
+
   void delta(String text) =>
       emit({'type': 'delta', 'id': lastAsk['id'], 'text': text});
 
@@ -375,6 +380,28 @@ class FakeChatConnection implements ChatConnection {
   Future<void> close() async {
     closed = true;
     if (!_incoming.isClosed) await _incoming.close();
+  }
+}
+
+class FakeMetronomeSound implements MetronomeSound {
+  int clicks = 0;
+  bool disposed = false;
+
+  @override
+  Future<void> click() async => clicks++;
+
+  @override
+  Future<void> dispose() async => disposed = true;
+}
+
+class FakeEmergencyDialer implements EmergencyDialer {
+  bool succeeds = true;
+  int calls = 0;
+
+  @override
+  Future<bool> dialEmergency() async {
+    calls++;
+    return succeeds;
   }
 }
 

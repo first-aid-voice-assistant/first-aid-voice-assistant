@@ -5,6 +5,8 @@
 # (numbers in words); ids, structure and comments are English.
 #
 # `instructions` are given one at a time. A step without `transitions` ends the scenario.
+# `media` names the picture the mobile app shows while an instruction is said (per step, or per
+# instruction as `{text, media}`); the pictures are drawings and need the same medical review.
 id: adult-bls
 title: Resuscytacja krążeniowo-oddechowa osoby dorosłej (RKO)
 trigger: >-
@@ -15,6 +17,7 @@ start: safety
 
 steps:
   - id: safety
+    media: cpr/scene-safety
     instructions:
       - Upewnij się, że Ty, poszkodowany i świadkowie jesteście bezpieczni.
     transitions:
@@ -27,6 +30,7 @@ steps:
       - {source: erc-2025-bls, section: Safety}
 
   - id: unsafe
+    media: cpr/keep-away
     note: >-
       The branch is not spelled out in the guidelines; it follows the project rule "rescuer
       safety first".
@@ -37,6 +41,7 @@ steps:
       - {source: erc-2025-bls, section: Safety}
 
   - id: check_response
+    media: cpr/shake-shoulders
     actions: [CHECK_RESPONSE]
     instructions:
       - Delikatnie potrząśnij poszkodowanego za ramiona i głośno zapytaj, czy wszystko w porządku.
@@ -49,6 +54,7 @@ steps:
       - {source: prr-bls-algorithm-2025, section: "Podstawowe zabiegi resuscytacyjne krok po kroku – STAN ŚWIADOMOŚCI"}
 
   - id: responsive
+    media: cpr/stay-observe
     note: >-
       The BLS algorithm applies to people who do not respond. The advice here is the general
       rule "call even if you are not sure" from the PRR key information sheet.
@@ -67,9 +73,12 @@ steps:
       comes, leave the person to call; the project deliberately does not give that instruction.
       Needs medical review.
     instructions:
-      - Jeśli ktoś jest z Tobą, poproś, żeby zadzwonił pod sto dwanaście. Jeśli jesteś sam, zadzwoń sam.
-      - Włącz w telefonie tryb głośnomówiący, żeby móc zacząć RKO w trakcie rozmowy z dyspozytorem.
-      - Jeśli to możliwe, zostań z poszkodowanym.
+      - text: Jeśli ktoś jest z Tobą, poproś, żeby zadzwonił pod sto dwanaście. Jeśli jesteś sam, zadzwoń sam.
+        media: cpr/call-112
+      - text: Włącz w telefonie tryb głośnomówiący, żeby móc zacząć RKO w trakcie rozmowy z dyspozytorem.
+        media: cpr/speakerphone
+      - text: Jeśli to możliwe, zostań z poszkodowanym.
+        media: cpr/stay-observe
     transitions:
       - when: >-
           wezwano pomoc (ktoś dzwoni, rozmówca rozmawia z dyspozytorem albo czeka, aż dyspozytor
@@ -88,9 +97,12 @@ steps:
       AED steps (sending someone for the AED, using it when it arrives) are deliberately left out
       of this draft: the assistant goes straight to compressions. Needs medical review.
     instructions:
-      - Ułóż poszkodowanego na plecach.
-      - Jedną rękę połóż na jego czole, a opuszki palców drugiej pod brodą. Delikatnie odegnij głowę do tyłu i unieś brodę.
-      - Przez nie dłużej niż dziesięć sekund patrz, słuchaj i staraj się wyczuć, czy poszkodowany oddycha.
+      - text: Ułóż poszkodowanego na plecach.
+        media: cpr/lay-on-back
+      - text: Jedną rękę połóż na jego czole, a opuszki palców drugiej pod brodą. Delikatnie odegnij głowę do tyłu i unieś brodę.
+        media: cpr/head-tilt
+      - text: Przez nie dłużej niż dziesięć sekund patrz, słuchaj i staraj się wyczuć, czy poszkodowany oddycha.
+        media: cpr/check-breathing
     asks: Czy poszkodowany oddycha prawidłowo?
     transitions:
       - when: >-
@@ -105,6 +117,7 @@ steps:
       - {source: erc-2025-bls, section: Recognising cardiac arrest}
 
   - id: breathing_normally
+    media: cpr/stay-observe
     note: >-
       Care of a breathing, unresponsive person (e.g. the recovery position) is a first-aid topic
       outside this scenario; the assistant only monitors and follows the dispatcher.
@@ -117,12 +130,18 @@ steps:
   - id: chest_compressions
     actions: [CHEST_COMPRESSIONS]
     instructions:
-      - Uklęknij obok poszkodowanego.
-      - Połóż nasadę jednej dłoni na środku klatki piersiowej, czyli na dolnej połowie mostka.
-      - Drugą dłoń połóż na pierwszej i spleć palce.
-      - Wyprostuj ramiona i ustaw je pionowo nad klatką piersiową poszkodowanego.
-      - Uciskaj mostek na głębokość co najmniej pięciu, ale nie więcej niż sześciu centymetrów, w tempie od stu do stu dwudziestu uciśnięć na minutę.
-      - Po każdym uciśnięciu zwolnij nacisk, nie odrywając dłoni od klatki piersiowej.
+      - text: Uklęknij obok poszkodowanego.
+        media: cpr/kneel
+      - text: Połóż nasadę jednej dłoni na środku klatki piersiowej, czyli na dolnej połowie mostka.
+        media: cpr/hand-position
+      - text: Drugą dłoń połóż na pierwszej i spleć palce.
+        media: cpr/hand-position
+      - text: Wyprostuj ramiona i ustaw je pionowo nad klatką piersiową poszkodowanego.
+        media: cpr/compressions
+      - text: Uciskaj mostek na głębokość co najmniej pięciu, ale nie więcej niż sześciu centymetrów, w tempie od stu do stu dwudziestu uciśnięć na minutę.
+        media: cpr/compressions
+      - text: Po każdym uciśnięciu zwolnij nacisk, nie odrywając dłoni od klatki piersiowej.
+        media: cpr/compressions
     asks: Czy umiesz wykonywać oddechy ratownicze?
     transitions:
       - when: nie jest przeszkolony albo nie potrafi wykonać oddechów ratowniczych
@@ -134,6 +153,7 @@ steps:
       - {source: erc-2025-bls, section: High-quality chest compressions}
 
   - id: compressions_only
+    media: cpr/compressions
     actions: [CHEST_COMPRESSIONS]
     instructions:
       - Prowadź RKO wyłącznie z uciskaniem klatki piersiowej, czyli uciskaj bez przerw, w tempie od stu do stu dwudziestu uciśnięć na minutę.
@@ -146,6 +166,7 @@ steps:
       - {source: prr-bls-algorithm-2025, section: "Algorytm podstawowych zabiegów resuscytacyjnych – Dorośli, jeśli nie jesteś przeszkolony w BLS"}
 
   - id: compressions_30_2
+    media: cpr/compressions
     actions: [CHEST_COMPRESSIONS]
     instructions:
       - Wykonaj trzydzieści uciśnięć klatki piersiowej, tak jak przed chwilą.
@@ -161,14 +182,22 @@ steps:
   - id: rescue_breaths
     actions: [OPEN_AIRWAY, RESCUE_BREATHS]
     instructions:
-      - Ponownie udrożnij drogi oddechowe, odginając głowę do tyłu i unosząc brodę.
-      - Palcem wskazującym i kciukiem ręki, która jest na czole, zaciśnij skrzydełka nosa poszkodowanego.
-      - Pozwól, żeby usta poszkodowanego się otworzyły, ale trzymaj brodę uniesioną.
-      - Weź normalny wdech i szczelnie obejmij swoimi ustami usta poszkodowanego.
-      - Wdmuchuj powietrze jednostajnie, przez około jedną sekundę, obserwując, czy klatka piersiowa się unosi. Wdmuchnij tylko tyle powietrza, żeby klatka zaczęła się unosić.
-      - Odsuń usta i obserwuj, jak klatka piersiowa opada. Weź kolejny normalny wdech i wykonaj drugi oddech ratowniczy.
-      - Nie przerywaj uciśnięć dłużej niż dziesięć sekund na dwa oddechy, nawet jeśli któryś z nich byłby nieskuteczny. Bez opóźnienia wróć dłońmi na mostek i wykonaj kolejne trzydzieści uciśnięć. Kontynuuj w stosunku trzydzieści uciśnięć do dwóch oddechów.
-      - Jeśli po dwóch próbach nie udaje się wdmuchnąć powietrza, rozważ, że przyczyną jest ciało obce w drogach oddechowych, i powiedz o tym dyspozytorowi.
+      - text: Ponownie udrożnij drogi oddechowe, odginając głowę do tyłu i unosząc brodę.
+        media: cpr/head-tilt
+      - text: Palcem wskazującym i kciukiem ręki, która jest na czole, zaciśnij skrzydełka nosa poszkodowanego.
+        media: cpr/pinch-nose
+      - text: Pozwól, żeby usta poszkodowanego się otworzyły, ale trzymaj brodę uniesioną.
+        media: cpr/pinch-nose
+      - text: Weź normalny wdech i szczelnie obejmij swoimi ustami usta poszkodowanego.
+        media: cpr/rescue-breath
+      - text: Wdmuchuj powietrze jednostajnie, przez około jedną sekundę, obserwując, czy klatka piersiowa się unosi. Wdmuchnij tylko tyle powietrza, żeby klatka zaczęła się unosić.
+        media: cpr/rescue-breath
+      - text: Odsuń usta i obserwuj, jak klatka piersiowa opada. Weź kolejny normalny wdech i wykonaj drugi oddech ratowniczy.
+        media: cpr/rescue-breath
+      - text: Nie przerywaj uciśnięć dłużej niż dziesięć sekund na dwa oddechy, nawet jeśli któryś z nich byłby nieskuteczny. Bez opóźnienia wróć dłońmi na mostek i wykonaj kolejne trzydzieści uciśnięć. Kontynuuj w stosunku trzydzieści uciśnięć do dwóch oddechów.
+        media: cpr/compressions
+      - text: Jeśli po dwóch próbach nie udaje się wdmuchnąć powietrza, rozważ, że przyczyną jest ciało obce w drogach oddechowych, i powiedz o tym dyspozytorowi.
+        media: cpr/call-112
     transitions:
       - when: wykonano dwa oddechy ratownicze
         goto: compressions_30_2
@@ -177,6 +206,7 @@ steps:
       - {source: erc-2025-bls, section: Rescue breaths}
 
   - id: end_cpr
+    media: cpr/stay-observe
     note: >-
       Only the conditions for stopping CPR come from the guideline; the closing sentence about
       staying with the person follows the project safety rules.

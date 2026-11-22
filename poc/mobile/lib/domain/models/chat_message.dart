@@ -16,6 +16,12 @@ sealed class AnswerEvent {
   const AnswerEvent();
 }
 
+class AnswerStep extends AnswerEvent {
+  const AnswerStep(this.media);
+
+  final String? media;
+}
+
 class AnswerDelta extends AnswerEvent {
   const AnswerDelta(this.text);
 
