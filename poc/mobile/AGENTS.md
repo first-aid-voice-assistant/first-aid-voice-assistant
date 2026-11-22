@@ -2,13 +2,15 @@
 
 Project-wide rules (language, domain and safety, data, documentation) are in the root [`AGENTS.md`](../../AGENTS.md); this file adds the rules specific to the mobile app. Run all commands from `poc/mobile/`.
 
-Status: start screen, on-device speech recognition with three selectable engines (Parakeet via sherpa-onnx, Vosk, Whisper via whisper.cpp), answers from the PoC server over a WebSocket, read aloud sentence by sentence while they are streamed (system voice or Piper). The user and the assistant take turns.
+Status: start screen, on-device speech recognition with three selectable engines (Parakeet via sherpa-onnx, Vosk, Whisper via whisper.cpp), answers from the PoC server over a WebSocket, read aloud sentence by sentence while they are streamed (system voice or Piper). The conversation is hands-free: a spoken greeting, the microphone switches off while the assistant speaks and on again by itself, the CPR metronome beats through the compression step.
 
 ## Safety in this part
 
 - The "call 112" button is always visible and works without the backend.
 - When the server is unreachable or returns an error, the app says so plainly and points the user to 112. It never shows an invented instruction.
-- The app must not take its own voice for the user's words: the microphone is off while the app speaks (it stops by itself after the user's turn). Listening while speaking needs working echo cancellation, checked on real phones, before it comes back.
+- The app must not take its own voice for the user's words: the microphone input is muted from the first sound of any speech of the assistant until 0.3 s after it ends (the recorder keeps running; utterances that overlap the muted time are dropped). Keep this for every new kind of speech (it goes through `ConversationViewModel._newSpeaker`).
+- The assistant never stops itself because of speech (no barge-in); only "Przerwij" stops it.
+- The compression reminder only repeats what the knowledge base already says (keep compressing in the rhythm of the beep); new spoken instructions belong in `knowledge/`, not in the app.
 
 ## Rules
 

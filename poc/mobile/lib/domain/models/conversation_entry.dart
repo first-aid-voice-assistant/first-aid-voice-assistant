@@ -17,6 +17,7 @@ class AssistantMessage extends ConversationEntry {
     this.text = '',
     this.state = AnswerState.waiting,
     this.spokenText = '',
+    this.reminder = false,
     this.firstTokenTime,
     this.firstSoundAfter,
   });
@@ -26,6 +27,8 @@ class AssistantMessage extends ConversationEntry {
   final AnswerState state;
 
   final String spokenText;
+
+  final bool reminder;
 
   final Duration? firstTokenTime;
 
@@ -53,6 +56,7 @@ class AssistantMessage extends ConversationEntry {
     text: text ?? this.text,
     state: state ?? this.state,
     spokenText: spokenText ?? this.spokenText,
+    reminder: reminder,
     firstTokenTime: firstTokenTime ?? this.firstTokenTime,
     firstSoundAfter: firstSoundAfter ?? this.firstSoundAfter,
   );

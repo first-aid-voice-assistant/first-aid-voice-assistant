@@ -22,13 +22,15 @@ class AudioPlayersMetronomeSound implements MetronomeSound {
         focus: AudioContextConfigFocus.mixWithOthers,
       ).build(),
     );
+    await _player.setSource(AssetSource(clickAsset));
   }
 
   @override
   Future<void> click() async {
     try {
       await (_configured ??= _configure());
-      await _player.play(AssetSource(clickAsset));
+      await _player.stop();
+      await _player.resume();
     } catch (e) {
       debugPrint('Metronome click failed: $e');
     }
