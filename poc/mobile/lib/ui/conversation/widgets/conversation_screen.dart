@@ -71,7 +71,24 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   _ModelStatus(viewModel: _viewModel),
                   const SizedBox(height: 12),
                 ],
-                Expanded(child: _StepView(viewModel: _viewModel)),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(child: _StepView(viewModel: _viewModel)),
+                      Align(
+                        alignment: Alignment.topCenter,
+                        child: _LoggedNotice(
+                          viewModel: _viewModel,
+                          onTap: () => showConversationHistory(
+                            context,
+                            _viewModel,
+                            initialTab: HistoryTab.eventLog,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 8),
                 _StatusLine(viewModel: _viewModel),
                 const SizedBox(height: 8),
@@ -191,6 +208,81 @@ class _StepView extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _LoggedNotice extends StatelessWidget {
+  const _LoggedNotice({required this.viewModel, required this.onTap});
+
+  final ConversationViewModel viewModel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final logged = viewModel.lastLogged;
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 250),
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: SlideTransition(
+          position: Tween(
+            begin: const Offset(0, -0.3),
+            end: Offset.zero,
+          ).animate(animation),
+          child: child,
+        ),
+      ),
+      child: logged == null
+          ? const SizedBox.shrink()
+          : Semantics(
+              key: ValueKey(logged.id),
+              liveRegion: true,
+              button: true,
+              label: 'Zapisano w dzienniku: ${logged.displayName}',
+              excludeSemantics: true,
+              child: Material(
+                color: AppColors.surface,
+                elevation: 3,
+                shadowColor: Colors.black26,
+                shape: const StadiumBorder(
+                  side: BorderSide(color: AppColors.ok, width: 1.5),
+                ),
+                child: InkWell(
+                  customBorder: const StadiumBorder(),
+                  onTap: onTap,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.check_circle_rounded,
+                          color: AppColors.ok,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'Zapisano: ${logged.displayName}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.text,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
     );
   }
 }

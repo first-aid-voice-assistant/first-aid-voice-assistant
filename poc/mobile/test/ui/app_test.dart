@@ -201,9 +201,40 @@ void main() {
     await tester.tap(find.bySemanticsLabel('Historia rozmowy'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Historia rozmowy'), findsOneWidget);
+    expect(find.byTooltip('Zamknij'), findsOneWidget);
+    expect(find.text('Rozmowa'), findsOneWidget);
     expect(find.text('głos po 1,0 s · model 0,1 s'), findsOneWidget);
     expect(find.text('14:21:02 · mowa 2,0 s · tekst po 0,3 s'), findsOneWidget);
+  });
+
+  testWidgets('a logged action is confirmed and listed in the log', (
+    tester,
+  ) async {
+    usePhoneScreen(tester);
+    await askOnce(tester);
+    socket.connection!
+      ..done('Uciskaj mocno i szybko.')
+      ..logged(
+        'CHEST_COMPRESSIONS',
+        at: DateTime(2026, 10, 27, 14, 21, 2),
+        transcript: 'Kolega nie oddycha',
+        label: 'Uciskanie klatki piersiowej',
+      );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Zapisano: Uciskanie klatki piersiowej'), findsOneWidget);
+
+    await tester.tap(find.text('Zapisano: Uciskanie klatki piersiowej'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dziennik (1)'), findsOneWidget);
+    expect(find.text('Uciskanie klatki piersiowej'), findsOneWidget);
+    expect(find.text('14:21:02'), findsOneWidget);
+    expect(find.text('+00:00'), findsOneWidget);
+    expect(find.text('Kopiuj dziennik (JSON)'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 5));
   });
 
   testWidgets('the picture of the step is shown with a metronome for CPR', (
