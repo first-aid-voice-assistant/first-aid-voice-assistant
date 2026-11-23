@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../domain/models/chat_message.dart';
+import '../../domain/models/event_log_entry.dart';
 import '../model/chat_protocol.dart';
 import '../services/chat_socket.dart';
 
@@ -19,6 +20,8 @@ class AssistantRepository {
   final Duration connectTimeout;
   final Duration answerTimeout;
 
+  final StreamController<EventLogEntry> _logged =
+      StreamController<EventLogEntry>.broadcast();
   ChatConnection? _connection;
   Future<ChatConnection>? _connecting;
   StreamSubscription<String>? _incoming;
@@ -26,16 +29,27 @@ class AssistantRepository {
   int _asked = 0;
   bool _disposed = false;
 
+  Stream<EventLogEntry> get loggedActions => _logged.stream;
+
   Stream<AnswerEvent> ask({
     required String text,
     List<ChatMessage> history = const [],
+    DateTime? spokenAt,
   }) {
     final previous = _active;
     if (previous != null) _finish(previous);
     final answer = _PendingAnswer('q${++_asked}');
     _active = answer;
     unawaited(
-      _send(answer, AskRequest(id: answer.id, text: text, history: history)),
+      _send(
+        answer,
+        AskRequest(
+          id: answer.id,
+          text: text,
+          history: history,
+          spokenAt: spokenAt,
+        ),
+      ),
     );
     return answer.events.stream;
   }
@@ -95,11 +109,19 @@ class AssistantRepository {
   }
 
   void _onMessage(String raw) {
-    final ServerEvent event;
+    final ServerEvent? event;
     try {
       event = ServerEvent.decode(raw);
     } catch (e) {
       debugPrint('Unexpected server message: $e');
+      return;
+    }
+    if (event == null) {
+      debugPrint('Ignored an unknown server event');
+      return;
+    }
+    if (event is ServerActionLogged) {
+      if (!_logged.isClosed) _logged.add(event.entry);
       return;
     }
     final answer = _active;
@@ -129,6 +151,8 @@ class AssistantRepository {
         _fail(answer, message);
       case ServerCancelled():
         _finish(answer);
+      case ServerActionLogged():
+        break;
     }
   }
 
@@ -161,6 +185,7 @@ class AssistantRepository {
     _incoming = null;
     await _connection?.close();
     _connection = null;
+    await _logged.close();
   }
 }
 

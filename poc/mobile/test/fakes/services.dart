@@ -371,6 +371,28 @@ class FakeChatConnection implements ChatConnection {
     'total_ms': 900,
   });
 
+  void logged(
+    String action, {
+    required DateTime at,
+    String transcript = 'Uciskam',
+    String? label,
+    String? entryId,
+    String? questionId,
+  }) => emit({
+    'type': 'action_logged',
+    'id': questionId ?? lastAsk['id'],
+    'entry': {
+      'id': entryId ?? '$action-${at.microsecondsSinceEpoch}',
+      'timestamp': at.toUtc().toIso8601String(),
+      'elapsed_s': 0.0,
+      'action': action,
+      'transcript': transcript,
+      'confidence': null,
+      'source': null,
+    },
+    'label': label,
+  });
+
   Future<void> drop() => _incoming.close();
 
   @override
