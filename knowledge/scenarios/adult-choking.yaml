@@ -1,12 +1,14 @@
 # Choking in an adult (foreign body airway obstruction), for a layperson. Escalating approach of
-# the ERC 2025 First Aid guideline: cough, then back blows, then abdominal thrusts, then the two
-# alternating; CPR when the person becomes unresponsive. Wording is Polish and meant to be read
-# aloud (numbers in words); ids, structure and comments are English.
+# the ERC 2025 First Aid guideline: cough, then up to five back blows, then up to five abdominal
+# thrusts, then the two alternating; CPR when the person becomes unresponsive. Wording is Polish
+# and meant to be read aloud (numbers in words); ids, structure and comments are English.
 #
-# NOTE FOR REVIEW: the guideline says to call the emergency number after five abdominal thrusts
-# have not helped. The project safety rule is to call first at any threat to life; the system
-# prompt keeps asking for the call, and the step `call_and_alternate` does not delay it if
-# someone else is present.
+# NEEDS MEDICAL REVIEW:
+# UNCERTAIN: when the emergency call is made. This scenario follows the ERC order (call
+#   after the first round of five back blows and five abdominal thrusts) and asks anyone
+#   nearby to call at once; a rescuer who is alone calls in `call_and_alternate`.
+# WHY: the project safety rule is 'call first at any threat to life', the guideline
+#   lists the call later and says it has no data on a choking person who is alone.
 id: adult-choking
 title: Zadławienie osoby dorosłej
 trigger: >-
@@ -20,79 +22,187 @@ steps:
     instructions:
       - Zapytaj poszkodowanego, czy się dławi.
     transitions:
-      - when: poszkodowany potwierdza, że się dławi, albo nie może mówić ani kaszleć
+      - when: >-
+          poszkodowany potwierdza, że się dławi, albo jest przytomny, ale nie może mówić ani
+          kaszleć (patrzy na Ciebie, rusza się, łapie się za gardło lub szyję)
         goto: encourage_cough
+      - when: poszkodowany stracił przytomność (leży bez ruchu, nie reaguje na głos ani dotyk, osunął się)
+        goto: unresponsive
+        log: UNRESPONSIVE
+      - when: poszkodowany nie odpowiada i nie wiadomo, czy jest przytomny
+        goto: check_conscious
     sources:
-      - {source: erc-2025-first-aid, section: Choking in an adult}
+      - {source: erc-2025-first-aid, section: Choking in an adult person}
+
+  - id: check_conscious
+    note: |-
+      NEEDS MEDICAL REVIEW:
+      UNCERTAIN: How to tell a choking person who cannot answer from one who has lost
+        consciousness, when the caller only says that the person does not answer.
+      WHY: ERC says to ask 'Are you choking?', and to start CPR when the person becomes
+        unresponsive, but does not say how to tell the two cases apart. This step uses the gentle
+        stimulation of the ABCDE assessment (look, touch the shoulder) and the caller's answer;
+        it is meant to avoid both asking an unconscious person again and again and starting back
+        blows on someone who is unresponsive.
+      ERC: Choking in an adult person; Structured first aid assessment (ABCDE), responsiveness.
+    instructions:
+      - Popatrz na poszkodowanego i delikatnie dotknij jego ramienia.
+    asks: Czy poszkodowany reaguje, czyli patrzy na Ciebie, rusza się albo próbuje mówić?
+    transitions:
+      - when: poszkodowany reaguje (patrzy, rusza się, próbuje mówić, łapie się za gardło)
+        goto: encourage_cough
+      - when: poszkodowany nie reaguje (leży bez ruchu, nie patrzy, nie rusza się)
+        goto: unresponsive
+        log: UNRESPONSIVE
+    sources:
+      - {source: erc-2025-first-aid, section: Choking in an adult person}
+      - {source: erc-2025-first-aid, section: "Structured first aid assessment of a person appearing ill, injured or in shock (ABCDE)"}
 
   - id: encourage_cough
-    actions: [ENCOURAGE_COUGH]
+    actions: [ENCOURAGE_COUGH, CALL_EMERGENCY]
+    note: |-
+      NEEDS MEDICAL REVIEW:
+      UNCERTAIN: Asking anyone nearby to call 112 right away, while a rescuer who is alone calls
+        only after the first round of back blows and abdominal thrusts.
+      WHY: ERC lists the call after the first round of blows and thrusts, and has no data on a
+        choking person who is alone. The request to a bystander is not in the guideline's order;
+        it follows the project rule 'call first' and the principle 'call as soon as possible'.
+        Decide whether a lone rescuer should call earlier.
+      ERC: Choking in an adult person; Choking (treatment of the awake, responsive person).
     instructions:
-      - Zachęcaj poszkodowanego do kaszlu.
+      - text: Zachęcaj poszkodowanego do kaszlu.
+        action: ENCOURAGE_COUGH
+      - text: Jeśli ktoś jest obok, poproś, żeby zadzwonił pod dziewięćset dziewięćdziesiąt dziewięć.
+        action: CALL_EMERGENCY
+    asks: Czy poszkodowany odkaszlnął przeszkodę, kaszle mocno, czy nie może kaszleć?
     transitions:
-      - when: poszkodowany skutecznie kaszle
-        goto: encourage_cough
-      - when: przeszkoda usunięta, poszkodowany oddycha i mówi
+      - when: poszkodowany kaszle mocno, ale przeszkoda jeszcze nie wyszła
+        goto: keep_coughing
+      - when: przeszkoda wyszła, poszkodowany oddycha i mówi
         goto: relieved
-      - when: poszkodowany nie może kaszleć albo kaszel jest nieskuteczny
+        log: OBSTRUCTION_CLEARED
+      - when: poszkodowany nie może kaszleć albo kaszel jest słaby lub nieskuteczny
         goto: back_blows
+      - when: poszkodowany stracił przytomność (przestał reagować, osunął się)
+        goto: unresponsive
+        log: UNRESPONSIVE
     sources:
-      - {source: erc-2025-first-aid, section: Choking in an adult}
-      - {source: erc-2025-brochure-pl, section: Zadławienie}
+      - {source: erc-2025-first-aid, section: Choking in an adult person}
+      - {source: erc-2025-first-aid, section: Choking – Treatment of the awake, responsive person with foreign body airway obstruction}
+      - {source: erc-2025-first-aid, section: Expectations of a first aid provider}
+
+  - id: keep_coughing
+    note: >-
+      ERC: a person who is awake and able to cough should be encouraged to do so, because coughing
+      generates high and sustained airway pressures; back blows and thrusts are for those who
+      cannot cough or speak, or whose cough is ineffective. If the cough gets weaker the
+      scenario moves on to back blows.
+    instructions:
+      - Niech kaszle dalej i obserwuj go. Czy przeszkoda wyszła, czy kaszel słabnie albo ustał?
+    transitions:
+      - when: przeszkoda wyszła, poszkodowany oddycha i mówi
+        goto: relieved
+        log: OBSTRUCTION_CLEARED
+      - when: kaszel słabnie albo ustał, albo poszkodowany nie może kaszleć
+        goto: back_blows
+      - when: poszkodowany stracił przytomność (przestał reagować, osunął się)
+        goto: unresponsive
+        log: UNRESPONSIVE
+    sources:
+      - {source: erc-2025-first-aid, section: Choking in an adult person}
+      - {source: erc-2025-first-aid, section: Choking – Treatment of the awake, responsive person with foreign body airway obstruction}
 
   - id: back_blows
     actions: [BACK_BLOWS]
     instructions:
-      - Wykonaj do pięciu uderzeń w plecy, w okolicę między łopatkami.
+      - Stań za poszkodowanym.
+      - text: Wykonaj do pięciu uderzeń w plecy nasadą dłoni, w środku pleców między łopatkami.
+        action: BACK_BLOWS
+    asks: Czy przeszkoda wyszła, czy poszkodowany nadal się dusi?
     transitions:
-      - when: przeszkoda usunięta
+      - when: przeszkoda wyszła, poszkodowany oddycha i mówi
         goto: relieved
-      - when: uderzenia w plecy nie pomogły
+        log: OBSTRUCTION_CLEARED
+      - when: przeszkoda nie wyszła, poszkodowany nadal się dusi i jest przytomny
         goto: abdominal_thrusts
+      - when: poszkodowany stracił przytomność (osunął się, nie reaguje na głos ani dotyk)
+        goto: unresponsive
+        log: UNRESPONSIVE
     sources:
-      - {source: erc-2025-first-aid, section: Choking in an adult}
-      - {source: erc-2025-brochure-pl, section: Zadławienie}
+      - {source: erc-2025-first-aid, section: Choking in an adult person}
+      - {source: erc-2025-first-aid, section: Choking – Treatment of the awake, responsive person with foreign body airway obstruction}
 
   - id: abdominal_thrusts
     actions: [ABDOMINAL_THRUSTS]
     instructions:
-      - Wykonaj do pięciu uciśnięć nadbrzusza.
+      - Stań za poszkodowanym i obejmij go obiema rękami w górnej części brzucha. Pochyl go do przodu.
+      - Zaciśnij pięść i umieść ją między pępkiem a dolnym brzegiem żeber. Chwyć pięść drugą dłonią.
+      - text: Wykonaj do pięciu uciśnięć nadbrzusza, pociągając mocno do siebie i ku górze.
+        action: ABDOMINAL_THRUSTS
+    asks: Czy przeszkoda wyszła, czy poszkodowany nadal się dusi?
     transitions:
-      - when: przeszkoda usunięta
+      - when: przeszkoda wyszła, poszkodowany oddycha i mówi
         goto: relieved
-      - when: uciśnięcia nadbrzusza nie pomogły
+        log: OBSTRUCTION_CLEARED
+      - when: przeszkoda nie wyszła, poszkodowany nadal się dusi i jest przytomny
         goto: call_and_alternate
+      - when: poszkodowany stracił przytomność (osunął się, nie reaguje na głos ani dotyk)
+        goto: unresponsive
+        log: UNRESPONSIVE
     sources:
-      - {source: erc-2025-first-aid, section: Choking in an adult}
-      - {source: erc-2025-brochure-pl, section: Zadławienie}
+      - {source: erc-2025-first-aid, section: Choking in an adult person}
+      - {source: erc-2025-first-aid, section: Choking – Treatment of the awake, responsive person with foreign body airway obstruction}
 
   - id: call_and_alternate
     actions: [CALL_EMERGENCY, BACK_BLOWS, ABDOMINAL_THRUSTS]
+    note: >-
+      The guideline: continue alternating five back blows and five abdominal thrusts until the
+      choking is relieved or the person becomes unresponsive; call the emergency number; do not
+      use blind finger sweeps (a finger sweep only when the object is clearly visible).
     instructions:
-      - Zadzwoń pod sto dwanaście albo poproś kogoś, żeby zadzwonił. Włącz tryb głośnomówiący.
+      - text: Zadzwoń pod dziewięćset dziewięćdziesiąt dziewięć albo poproś kogoś, żeby zadzwonił. Włącz tryb głośnomówiący.
+        action: CALL_EMERGENCY
       - Dalej wykonuj naprzemiennie pięć uderzeń w plecy i pięć uciśnięć nadbrzusza, aż przeszkoda zostanie usunięta albo poszkodowany straci przytomność.
       - Nie wyciągaj przeszkody z ust palcami na ślepo.
+    asks: Czy przeszkoda wyszła, czy poszkodowany stracił przytomność?
     transitions:
-      - when: przeszkoda usunięta
+      - when: przeszkoda wyszła, poszkodowany oddycha i mówi
         goto: relieved
-      - when: poszkodowany stracił przytomność
+        log: OBSTRUCTION_CLEARED
+      - when: poszkodowany stracił przytomność (osunął się, nie reaguje na głos ani dotyk)
         goto: unresponsive
+        log: UNRESPONSIVE
     sources:
-      - {source: erc-2025-first-aid, section: Choking in an adult}
+      - {source: erc-2025-first-aid, section: Choking in an adult person}
+      - {source: erc-2025-first-aid, section: Choking – Treatment of the unresponsive person with foreign body airway obstruction}
 
   - id: unresponsive
+    note: |-
+      ERC: if the person becomes unresponsive with absent or abnormal breathing, chest compressions
+      are started according to standard BLS (compressions generate higher airway pressures than
+      abdominal thrusts). The hand-off continues in adult-bls at the compressions.
+
+      NEEDS MEDICAL REVIEW:
+      UNCERTAIN: The first instruction, to lay the person carefully on the back.
+      WHY: The choking text says only to start CPR, but the compressions that follow (kneel beside
+        the person, hands on the sternum) need the person on the back, and a rescuer who has just
+        done back blows and abdominal thrusts from behind is standing next to a person who is
+        falling or has fallen. Whether and how to say it is a decision for a reviewer.
+      ERC: Choking – Treatment of the unresponsive person with foreign body airway obstruction.
     instructions:
-      - Poszkodowany stracił przytomność. Upewnij się, że wezwano pogotowie pod numer sto dwanaście, i od razu zacznij RKO.
+      - Poszkodowany stracił przytomność. Ostrożnie połóż go na plecach.
+      - Upewnij się, że wezwano pogotowie pod numer dziewięćset dziewięćdziesiąt dziewięć, i od razu zacznij RKO.
     transitions:
       - when: zawsze
         handoff: adult-bls/chest_compressions
     sources:
-      - {source: erc-2025-first-aid, section: Choking in an adult}
-      - {source: erc-2025-brochure-pl, section: Zadławienie}
+      - {source: erc-2025-first-aid, section: Choking in an adult person}
+      - {source: erc-2025-first-aid, section: Choking – Treatment of the unresponsive person with foreign body airway obstruction}
 
   - id: relieved
     instructions:
       - Dobrze. Poszkodowany powinien zostać zbadany przez lekarza lub ratownika, nawet jeśli czuje się dobrze, bo po uciśnięciach mogą wystąpić powikłania.
     transitions: []
     sources:
-      - {source: erc-2025-first-aid, section: Choking in an adult}
+      - {source: erc-2025-first-aid, section: Choking in an adult person}
+      - {source: erc-2025-first-aid, section: Choking – Aftercare and referral for medical review}

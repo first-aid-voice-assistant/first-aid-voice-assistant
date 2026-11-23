@@ -1,0 +1,16 @@
+# Pozycja boczna: oddech przestaje być prawidłowy w trakcie układania (zdarzenie w środku kroku)
+# Uruchomienie (serwer musi działać): uv run python scripts/chat_repl.py --script scripts/dialogues/adult-recovery-position-breathing-stops.txt
+# Jedna linia = jedna wypowiedź użytkownika; linie z # są pomijane przez skrypt.
+
+# Oczekiwane: [adult-recovery-position/check_trauma] Zanim ułożysz poszkodowanego na boku, upewnij się, że nie doznał urazu.
+Koleżanka zemdlała na imprezie i nie reaguje, ale oddycha spokojnie i normalnie
+# Oczekiwane: [adult-recovery-position/check_trauma] Czy poszkodowany upadł z wysokości, uczestniczył w wypadku, został przygnieciony albo miał inny poważny uraz?
+Rozumiem
+# Oczekiwane (przejście do roll_to_side): Uklęknij obok poszkodowanego i upewnij się, że jego nogi są wyprostowane.
+Nie, nie spadła z niczego, po prostu zemdlała
+# Oczekiwane: [roll_to_side] Rękę leżącą bliżej Ciebie odłóż na bok pod kątem prostym do ciała. Może być wyprostowana albo zgięta w łokciu.
+Uklęknąłem, nogi ma proste
+# Oczekiwane (zdarzenie w środku kroku, przejście do adult-bls/check_breathing): Ułóż poszkodowanego na plecach.
+Przestała oddychać normalnie, tylko chrapie i charczy
+# Oczekiwane: [adult-bls/check_breathing] Jedną rękę połóż na jego czole, a opuszki palców drugiej pod brodą. Delikatnie odegnij głowę do tyłu i unieś brodę.
+Leży już na plecach

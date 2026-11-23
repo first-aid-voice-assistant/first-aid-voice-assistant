@@ -29,10 +29,16 @@ class Source(BaseModel):
 
 
 class Action(BaseModel):
+    """An entry of the event log dictionary: something the rescuer did, or something observed."""
+
     code: str = Field(pattern=r"^[A-Z][A-Z0-9_]*$")
     name: str
     level: Level
     synonyms: list[str] = Field(default_factory=list)
+    # "action": a rescue action the user performs (logged when they confirm the instruction that
+    # asked for it); "observation": a change in the situation (logged when the scenario moves on
+    # because of it, e.g. the person stopped responding).
+    kind: Literal["action", "observation"] = "action"
 
 
 class ActionDictionary(BaseModel):
@@ -50,20 +56,37 @@ class Transition(BaseModel):
     when: str
     goto: str | None = None
     handoff: str | None = Field(default=None, pattern=r"^[\w-]+/[\w-]+$")  # scenario/step
-    # A branch for an obstacle (e.g. no phone signal) that may be taken in the middle of a step,
-    # before all its instructions were said. Other transitions wait until the step is done.
+    # A branch that may be taken in the middle of a step, before all its instructions were said
+    # (an event such as "stopped breathing" or "the AED has arrived"; the model is asked about it
+    # every turn of the step). Other transitions wait until the step is done.
     interrupt: bool = False
+    # Code of an `observation` (actions.yaml) written to the event log when this branch is taken
+    # because of the user's words. Not for `when: zawsze`: nothing was said then.
+    log: str | None = Field(default=None, pattern=r"^[A-Z][A-Z0-9_]*$")
+    # An interrupt branch for a problem with the phone (no signal): it is chosen by the intent of
+    # the user's words, not by asking about an event. Implies `interrupt`.
+    obstacle: bool = False
+
+    @property
+    def unconditional(self) -> bool:
+        """True for a transition that is always taken once the step is done (`when: zawsze`)."""
+        return self.when.strip().lower() == "zawsze"
 
     @model_validator(mode="after")
     def _exactly_one_target(self) -> "Transition":
         if (self.goto is None) == (self.handoff is None):
             raise ValueError("a transition needs exactly one of `goto` and `handoff`")
+        if self.obstacle:
+            self.interrupt = True
         return self
 
 
 class Instruction(BaseModel):
     text: str
     media: MediaKey | None = None
+    # Code of the action (actions.yaml) this instruction asks for; written to the event log when
+    # the user confirms it. It must be one of the `actions` of the step.
+    action: str | None = Field(default=None, pattern=r"^[A-Z][A-Z0-9_]*$")
 
 
 class Step(BaseModel):

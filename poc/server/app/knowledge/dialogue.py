@@ -6,6 +6,20 @@ instruction. Inside a step the cursor moves by itself (the user's next words are
 answer satisfies. When the call gives no clear answer the cursor stays where it is: the
 assistant repeats instead of guessing.
 
+Branches marked `interrupt` (events such as "the person stopped breathing" or "the AED has
+arrived") may be taken in the middle of a step: the model is asked about them every turn. Branches
+marked `obstacle` (no phone signal) are chosen by the intent of the user's words instead.
+
+The model normally writes the answer from the task of the turn. In the verbatim mode
+(`verbatim=True`) it never does: the answer is the exact text of the scenario (or a fixed phrase
+of `prompts/scenario_v1.yaml`, see `spoken`) and the model only classifies the user's words.
+
+The same pass fills the event log, without any model call of its own (`logged`): when the user
+confirms an instruction that asks for an action (`action` in the scenario) that action is logged,
+and when a branch with a `log` is taken because of what the user said, that observation is. A
+confirmation is the intent the dialogue computes anyway, so the log costs nothing extra and records
+only what the scenario asked for and the user answered.
+
 The cursor moves only after an answer was completed, so an interrupted answer is said again.
 The state lives as long as the object, i.e. one WebSocket connection.
 """
@@ -15,12 +29,14 @@ from dataclasses import dataclass
 
 from app.knowledge.models import KnowledgeBase, Scenario, Step, Transition
 from app.knowledge.prompts import ScenarioPrompts
-from app.providers.base import LLMDone, LLMOptions, LLMProvider, Message
+from app.pipeline.completion import complete
+from app.providers.base import LLMProvider, Message
 
 _USER_MESSAGES_FOR_ROUTING = 3
 _DIGIT = re.compile(r"\W*(\d+)")
 _OBSTACLE, _OTHER = "PRZESZKODA", "INNE"  # labels of the intent call
-_INTENT_LABELS = ("POTWIERDZENIE", _OBSTACLE, _OTHER)
+_CONFIRMATION = "POTWIERDZENIE"
+_INTENT_LABELS = (_CONFIRMATION, _OBSTACLE, _OTHER)
 _REPEATS_BEFORE_ASKING = 2
 
 
@@ -36,19 +52,29 @@ def with_task(system_prompt: str, task: str) -> str:
 class KnowledgeRuntime:
     kb: KnowledgeBase
     prompts: ScenarioPrompts
+    verbatim: bool = False  # say the exact text of the scenarios instead of letting the model write
 
     def system_prompt(self, base: str) -> str:
         return with_task(base, self.prompts.rules.strip())
 
     def dialogue(self, llm: LLMProvider) -> "ScenarioDialogue":
-        return ScenarioDialogue(self.kb, self.prompts, llm)
+        return ScenarioDialogue(self.kb, self.prompts, llm, verbatim=self.verbatim)
 
 
 class ScenarioDialogue:
-    def __init__(self, kb: KnowledgeBase, prompts: ScenarioPrompts, llm: LLMProvider) -> None:
+    def __init__(
+        self,
+        kb: KnowledgeBase,
+        prompts: ScenarioPrompts,
+        llm: LLMProvider,
+        *,
+        verbatim: bool = False,
+    ) -> None:
         self._scenarios = {s.id: s for s in kb.scenarios}
         self._prompts = prompts
         self._llm = llm
+        self._verbatim = verbatim
+        self._spoken: str | None = None
         self._scenario: Scenario | None = None
         self._step: Step | None = None
         self._unit = 0  # index of the next thing to say in the step (see Step.units)
@@ -57,16 +83,37 @@ class ScenarioDialogue:
         self._repeats = 0  # consecutive turns in which the last instruction was repeated
         self._interjected = False  # the previous turn answered a problem instead of moving on
         self._media: str | None = None
+        # Words that announce an action instead of reporting it ("zaraz zadzwonię"): not logged.
+        self._announcement = re.compile(prompts.announcement, re.IGNORECASE)
+        self._logged: list[str] = []  # event log codes of this turn (see `logged`)
+        self._observed: list[str] = []  # codes of the branches taken in this turn
 
     @property
     def media(self) -> str | None:
         """Picture of the current turn's instruction (set by `begin_turn`); None without one."""
         return self._media
 
+    @property
+    def logged(self) -> list[str]:
+        """Event log codes of this turn, in order (set by `begin_turn`): the confirmed action
+        first, then the observations of the branches taken."""
+        return list(self._logged)
+
+    @property
+    def spoken(self) -> str | None:
+        """The exact answer of this turn in the verbatim mode (set by `begin_turn`), else None."""
+        return self._spoken
+
     async def begin_turn(self, user_text: str, history: list[Message]) -> str:
-        """Moves the cursor if the user's words call for it; returns the task for the model."""
+        """Moves the cursor if the user's words call for it; returns the task for the model.
+
+        In the verbatim mode the model is not asked to write anything: the answer is `spoken`.
+        """
+        self._spoken = None
         self._advance_on_completion = False
         self._moved = False
+        self._logged = []
+        self._observed = []
         was_interjected, self._interjected = self._interjected, False
         interject = False
         if self._step is None:
@@ -75,12 +122,33 @@ class ScenarioDialogue:
             # Something was said in this step, so the user is reacting to it. A confirmation lets
             # the cursor go on; a problem may call for a transition (e.g. no phone signal); a
             # problem or a question outside the procedure is answered without moving on.
+            confirmed = self._confirmed_action()  # before the cursor moves
             intent = await self._intent(user_text, history)
             exhausted = self._unit >= len(self._step.units)
+            raw_intent = intent
             if intent == _OTHER and "?" not in user_text:
                 intent = ""  # a statement ("I am afraid") is not a question: the procedure goes on
             if intent == _OBSTACLE or (exhausted and intent != _OTHER):
-                await self._follow_transition(user_text, history, interrupting=not exhausted)
+                await self._follow_transition(
+                    user_text,
+                    history,
+                    interrupting=not exhausted,
+                    obstacle=intent == _OBSTACLE,
+                )
+            event_taken = False
+            if not self._moved:
+                event_taken = await self._follow_event(user_text, history)
+            # The user confirmed what was asked, so the action is logged. Not when they reported
+            # an event instead ("the AED has arrived" is no confirmation of the last instruction),
+            # and not when the words only announce the action.
+            if (
+                confirmed is not None
+                and raw_intent == _CONFIRMATION
+                and not event_taken
+                and not self._announcement.search(user_text)
+            ):
+                self._logged.append(confirmed)
+            self._logged.extend(self._observed)
             # A problem or a question outside the procedure is sent to the dispatcher only once in
             # a row; if the user keeps raising them, the procedure goes on.
             interject = not self._moved and intent in (_OBSTACLE, _OTHER) and not was_interjected
@@ -88,25 +156,46 @@ class ScenarioDialogue:
         if self._step is None:
             self._media = None
             titles = ", ".join(s.title for s in self._scenarios.values())
-            return self._prompts.idle.format(titles=titles).strip()
+            task = self._prompts.idle.format(titles=titles).strip()
+            return self._answer(task, self._prompts.spoken.idle)
         units, media = self._step.units, self._step.unit_media
         if interject:
             last = min(self._unit, len(units)) - 1
             self._media = media[last]
             self._interjected = True
-            return self._prompts.interject.format(last=units[last]).strip()
+            task = self._prompts.interject.format(last=units[last]).strip()
+            return self._answer(task, await self._interjection(user_text, history, units[last]))
         if self._unit < len(units):
             self._media = media[self._unit]
             self._repeats = 0
             self._advance_on_completion = True
-            return self._prompts.say.format(instruction=units[self._unit]).strip()
+            task = self._prompts.say.format(instruction=units[self._unit]).strip()
+            return self._answer(task, units[self._unit])
         self._media = media[-1]
         if not self._step.transitions:
-            return self._prompts.finished.strip()
+            return self._answer(self._prompts.finished.strip(), units[-1])
         self._repeats += 1
         if self._repeats > _REPEATS_BEFORE_ASKING:
-            return self._prompts.stuck.strip()
-        return self._prompts.repeat.format(last=units[-1]).strip()
+            return self._answer(self._prompts.stuck.strip(), self._prompts.spoken.stuck)
+        task = self._prompts.repeat.format(last=units[-1]).strip()
+        return self._answer(task, units[-1])
+
+    def _answer(self, task: str, spoken: str | None) -> str:
+        """The task for the model, and in the verbatim mode also the text said instead of it."""
+        self._spoken = _one_line(spoken) if self._verbatim and spoken else None
+        return task
+
+    async def _interjection(self, user_text: str, history: list[Message], last: str) -> str | None:
+        """Verbatim mode: the fixed reaction to words outside the procedure plus the last step."""
+        if not self._verbatim:
+            return None
+        last_assistant = next((m.content for m in reversed(history) if m.role == "assistant"), "")
+        prompt = self._prompts.route_interject.format(
+            assistant=_one_line(last_assistant), user=_one_line(user_text)
+        )
+        phrases = self._prompts.spoken.interject
+        by_kind = (phrases.other, phrases.fear, phrases.question, phrases.news)  # digit = index
+        return by_kind[await self._choose(prompt, len(by_kind) - 1)].format(last=last)
 
     def turn_completed(self) -> None:
         if self._advance_on_completion:
@@ -138,14 +227,53 @@ class ScenarioDialogue:
         label = word.group(1).upper() if word else ""
         return label if label in _INTENT_LABELS else ""
 
+    def _confirmed_action(self) -> str | None:
+        """The action asked for by the instruction that the user is answering now, if any."""
+        assert self._step is not None
+        index = min(self._unit, len(self._step.units)) - 1
+        if 0 <= index < len(self._step.instructions):
+            return self._step.instructions[index].action
+        return None  # the question (`asks`) asks for an answer, not for an action
+
+    async def _follow_event(self, user_text: str, history: list[Message]) -> bool:
+        """Takes an `interrupt` branch if the user just reported its event (any turn of a step)."""
+        assert self._step is not None
+        events = [t for t in self._step.transitions if t.interrupt and not t.obstacle]
+        if not events:
+            return False
+        last_assistant = next((m.content for m in reversed(history) if m.role == "assistant"), "")
+        prompt = self._prompts.route_event.format(
+            assistant=_one_line(last_assistant),
+            user=_one_line(user_text),
+            options="\n".join(f"{i}. {_one_line(t.when)}" for i, t in enumerate(events, 1)),
+        )
+        choice = await self._choose(prompt, len(events))
+        if choice:
+            self._take(events[choice - 1])
+        return bool(choice)
+
     async def _follow_transition(
-        self, user_text: str, history: list[Message], *, interrupting: bool = False
+        self,
+        user_text: str,
+        history: list[Message],
+        *,
+        interrupting: bool = False,
+        obstacle: bool = False,
     ) -> None:
         assert self._step is not None
-        transitions = [t for t in self._step.transitions if t.interrupt or not interrupting]
+        # The branches for an obstacle (no phone signal) are chosen by the intent of the words and
+        # only then; for any other words they are not candidates, so a step whose only other
+        # branch is `when: zawsze` has nothing left to ask the model about.
+        wants_obstacle = interrupting or obstacle
+        transitions = [t for t in self._step.transitions if t.obstacle == wants_obstacle]
         if not transitions:
             return
-        if interrupting and len(transitions) == 1:
+        if len(transitions) == 1 and transitions[0].unconditional:
+            # Nothing to decide ("zawsze"): asking the model to confirm a statement that is not
+            # a condition made it answer "none", and the dialogue got stuck repeating the step.
+            self._take(transitions[0])
+            return
+        if wants_obstacle and len(transitions) == 1:
             # The intent call already judged the words an obstacle and this is the only branch
             # for one: asking the model to pick a number again only adds noise.
             self._take(transitions[0])
@@ -155,6 +283,9 @@ class ScenarioDialogue:
             assistant=_one_line(last_assistant),
             user=_one_line(user_text),
             options="\n".join(f"{i}. {_one_line(t.when)}" for i, t in enumerate(transitions, 1)),
+            # An answer to a question may be about something else; after a plain instruction the
+            # user reports an event instead, and an offered "none" made the model miss it.
+            none=f"\n{self._prompts.route_step_none}" if self._step.asks else "",
         )
         choice = await self._choose(prompt, len(transitions))
         if not choice:
@@ -162,6 +293,8 @@ class ScenarioDialogue:
         self._take(transitions[choice - 1])
 
     def _take(self, chosen: Transition) -> None:
+        if chosen.log is not None:
+            self._observed.append(chosen.log)
         if chosen.goto is not None:
             assert self._scenario is not None
             self._enter(self._scenario, chosen.goto)
@@ -177,14 +310,7 @@ class ScenarioDialogue:
         self._repeats = 0
 
     async def _complete(self, prompt: str, max_tokens: int) -> str:
-        text = ""
-        messages = [Message(role="user", content=prompt)]
-        async for event in self._llm.generate_stream(
-            messages, LLMOptions(temperature=0.0, max_tokens=max_tokens)
-        ):
-            if isinstance(event, LLMDone):
-                text = event.text
-        return text
+        return await complete(self._llm, prompt, max_tokens)
 
     async def _choose(self, prompt: str, options: int) -> int:
         """Asks the model for one digit; 0 means "none" and is also the answer to anything else."""

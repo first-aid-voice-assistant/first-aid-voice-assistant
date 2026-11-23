@@ -1,0 +1,51 @@
+# Zadławienie: kaszel, uderzenia w plecy, uciśnięcia nadbrzusza, utrata przytomności, RKO
+# Uruchomienie (serwer musi działać): uv run python scripts/chat_repl.py --script scripts/dialogues/adult-choking.txt
+# Jedna linia = jedna wypowiedź użytkownika; linie z # są pomijane przez skrypt.
+# Nad każdą wypowiedzią jest komentarz: krok scenariusza i to, co asystent powinien powiedzieć
+# (prawie słowo w słowo; model może skrócić). Wypowiedzi są pisane tak, jak mówi człowiek.
+
+# Oczekiwane: [adult-choking/recognise] Zapytaj poszkodowanego, czy się dławi.
+Pomocy, tata się dławi, złapał się za gardło i nie może mówić
+# Oczekiwane (przejście do adult-choking/encourage_cough): Zachęcaj poszkodowanego do kaszlu.
+Pytam go, kiwa głową, że się dławi, i nic nie mówi
+# Oczekiwane: [adult-choking/encourage_cough] Jeśli ktoś jest obok, poproś, żeby zadzwonił pod dziewięćset dziewięćdziesiąt dziewięć.
+Kazałem mu kaszleć
+# Oczekiwane: [adult-choking/encourage_cough] Czy poszkodowany odkaszlnął przeszkodę, kaszle mocno, czy nie może kaszleć?
+Poprosiłem żonę, dzwoni
+# Oczekiwane (przejście do adult-choking/back_blows): Stań za poszkodowanym.
+Nie, w ogóle nie może kaszleć
+# Oczekiwane: [adult-choking/back_blows] Wykonaj do pięciu uderzeń w plecy nasadą dłoni, w środku pleców między łopatkami.
+Stoję za nim
+# Oczekiwane: [adult-choking/back_blows] Czy przeszkoda wyszła, czy poszkodowany nadal się dusi?
+Uderzyłem go pięć razy w plecy
+# Oczekiwane (przejście do adult-choking/abdominal_thrusts): Stań za poszkodowanym i obejmij go obiema rękami w górnej części brzucha. Pochyl go do przodu.
+Nadal się dusi
+# Oczekiwane: [adult-choking/abdominal_thrusts] Zaciśnij pięść i umieść ją między pępkiem a dolnym brzegiem żeber. Chwyć pięść drugą dłonią.
+Objąłem go rękami w pasie
+# Oczekiwane: [adult-choking/abdominal_thrusts] Wykonaj do pięciu uciśnięć nadbrzusza, pociągając mocno do siebie i ku górze.
+Zacisnąłem pięść nad pępkiem
+# Oczekiwane: [adult-choking/abdominal_thrusts] Czy przeszkoda wyszła, czy poszkodowany nadal się dusi?
+Zrobiłem pięć uciśnięć brzucha
+# Oczekiwane (przejście do adult-choking/call_and_alternate): Zadzwoń pod dziewięćset dziewięćdziesiąt dziewięć albo poproś kogoś, żeby zadzwonił. Włącz tryb głośnomówiący.
+Nie wyszła, nadal się dusi
+# Oczekiwane: [adult-choking/call_and_alternate] Dalej wykonuj naprzemiennie pięć uderzeń w plecy i pięć uciśnięć nadbrzusza, aż przeszkoda zostanie usunięta albo poszkodowany straci przytomność.
+Żona już dzwoni, włączyła głośnik
+# Oczekiwane: [adult-choking/call_and_alternate] Nie wyciągaj przeszkody z ust palcami na ślepo.
+Dalej robię na przemian
+# Oczekiwane: [adult-choking/call_and_alternate] Czy przeszkoda wyszła, czy poszkodowany stracił przytomność?
+Rozumiem
+# Oczekiwane (przejście do adult-choking/unresponsive): Poszkodowany stracił przytomność. Ostrożnie połóż go na plecach.
+Osunął się i stracił przytomność
+# Oczekiwane: [adult-choking/unresponsive] Upewnij się, że wezwano pogotowie pod numer dziewięćset dziewięćdziesiąt dziewięć, i od razu zacznij RKO.
+Położyłem go na plecach
+# Oczekiwane (przejście do adult-bls/chest_compressions): Uklęknij obok poszkodowanego.
+# Oczekiwane (przejście do adult-bls/chest_compressions/0): Uklęknij obok poszkodowanego. Jeśli ubranie przeszkadza w znalezieniu mostka, odsłoń klatkę piersiową.
+Żona dzwoni, zaczynam
+# Oczekiwane: [adult-bls/chest_compressions/1] Połóż nasadę jednej dłoni na środku klatki piersiowej, czyli na dolnej połowie mostka.
+Klęczę obok niego i odsłoniłem mu klatkę piersiową
+# Oczekiwane: [adult-bls/chest_compressions/2] Drugą dłoń połóż na pierwszej i spleć palce. Wyprostuj ramiona i ustaw je pionowo nad klatką piersiową poszkodowanego.
+Dłoń leży na środku klatki
+# Oczekiwane: [adult-bls/chest_compressions/3] Uciskaj mostek na głębokość co najmniej pięciu, ale nie więcej niż sześciu centymetrów, w tempie od stu do stu dwudziestu uciśnięć na minutę.
+Drugą dłoń położyłem na pierwszej, ramiona mam proste
+# Oczekiwane: [adult-bls/chest_compressions/4] Po każdym uciśnięciu pozwól klatce piersiowej całkowicie wrócić do pozycji wyjściowej, nie opierając się na niej, ale nie odrywaj dłoni od klatki.
+Uciskam

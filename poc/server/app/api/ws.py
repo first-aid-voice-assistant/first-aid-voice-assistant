@@ -10,17 +10,25 @@ import asyncio
 import contextlib
 import logging
 import time
+from datetime import UTC, datetime
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from pydantic import BaseModel, Field, TypeAdapter, ValidationError
+from pydantic import AwareDatetime, BaseModel, Field, TypeAdapter, ValidationError
 
+from app.eventlog import EventLogEntry, EventLogRecorder
 from app.knowledge import ScenarioDialogue
 from app.pipeline.prompt import build_prompt
 from app.providers.base import LLMDelta, LLMDone, LLMOptions, LLMProvider, Message
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# A long rescue (CPR) easily exceeds 25 turns, so a long history must not be rejected: that would
+# turn every later answer into an error. The server accepts a generous amount and gives the model
+# only the latest messages (the position in the scenario is kept by the dialogue, not the history).
+_MAX_HISTORY_ACCEPTED = 500
+_MAX_HISTORY_FOR_MODEL = 20
 
 
 class HistoryMessage(BaseModel):
@@ -32,7 +40,10 @@ class AskMessage(BaseModel):
     type: Literal["ask"]
     id: str = Field(min_length=1, max_length=64)
     text: str = Field(min_length=1, max_length=2000)
-    history: list[HistoryMessage] = Field(default_factory=list, max_length=50)
+    history: list[HistoryMessage] = Field(default_factory=list, max_length=_MAX_HISTORY_ACCEPTED)
+    # When the user finished speaking (ISO 8601 with a time zone); it stamps the event log entries.
+    # Without it the time the server received the question is used.
+    spoken_at: AwareDatetime | None = None
 
 
 class CancelMessage(BaseModel):
@@ -75,7 +86,16 @@ class ErrorEvent(BaseModel):
     message: str
 
 
-ServerEvent = StepEvent | DeltaEvent | DoneEvent | CancelledEvent | ErrorEvent
+class ActionLoggedEvent(BaseModel):
+    """An action the user confirmed, or an observation they reported; the client keeps it in its
+    event log (the dialogue decides, see `ScenarioDialogue.logged`)."""
+
+    type: Literal["action_logged"] = "action_logged"
+    id: str  # id of the question the action was reported in
+    entry: EventLogEntry
+
+
+ServerEvent = StepEvent | DeltaEvent | DoneEvent | CancelledEvent | ErrorEvent | ActionLoggedEvent
 
 
 class _ChatSession:
@@ -85,11 +105,13 @@ class _ChatSession:
         llm: LLMProvider,
         system_prompt: str,
         dialogue: ScenarioDialogue | None = None,
+        recorder: EventLogRecorder | None = None,
     ) -> None:
         self._ws = ws
         self._llm = llm
         self._system_prompt = system_prompt
         self._dialogue = dialogue
+        self._recorder = recorder
         # Answers stream from a task while the receive loop keeps reading; the lock keeps
         # their frames from interleaving with frames sent by the loop.
         self._send_lock = asyncio.Lock()
@@ -115,7 +137,8 @@ class _ChatSession:
                 await self._stop_current(notify=True)
             return
         await self._stop_current(notify=True)
-        self._current = (msg.id, asyncio.create_task(self._answer(msg)))
+        spoken_at = msg.spoken_at or datetime.now(UTC)
+        self._current = (msg.id, asyncio.create_task(self._answer(msg, spoken_at)))
 
     async def _stop_current(self, *, notify: bool) -> None:
         current, self._current = self._current, None
@@ -130,15 +153,21 @@ class _ChatSession:
         if notify:
             await self._send(CancelledEvent(id=ask_id))
 
-    async def _answer(self, msg: AskMessage) -> None:
-        history = [Message(role=m.role, content=m.content) for m in msg.history]
+    async def _answer(self, msg: AskMessage, spoken_at: datetime) -> None:
+        history = [
+            Message(role=m.role, content=m.content) for m in msg.history[-_MAX_HISTORY_FOR_MODEL:]
+        ]
         started = time.perf_counter()
         first_token_ms: int | None = None
         try:
             task = None
             if self._dialogue is not None:
                 task = await self._dialogue.begin_turn(msg.text, history)
+                await self._log_actions(msg, spoken_at)
                 await self._send(StepEvent(id=msg.id, media=self._dialogue.media))
+                if self._dialogue.spoken is not None:
+                    await self._say_verbatim(msg.id, self._dialogue.spoken, started)
+                    return
             messages = build_prompt(self._system_prompt, history, msg.text, task)
             async for ev in self._llm.generate_stream(messages, LLMOptions()):
                 if isinstance(ev, LLMDelta):
@@ -166,6 +195,32 @@ class _ChatSession:
             with contextlib.suppress(Exception):
                 await self._send(ErrorEvent(id=msg.id, message="The model failed to answer"))
 
+    async def _say_verbatim(self, ask_id: str, text: str, started: float) -> None:
+        """Sends a ready text (verbatim mode) in the same events as a streamed model answer."""
+        assert self._dialogue is not None
+        await self._send(DeltaEvent(id=ask_id, text=text))
+        first_token_ms = _elapsed_ms(started)
+        self._dialogue.turn_completed()
+        await self._send(
+            DoneEvent(id=ask_id, text=text, first_token_ms=first_token_ms, total_ms=first_token_ms)
+        )
+
+    async def _log_actions(self, msg: AskMessage, spoken_at: datetime) -> None:
+        """Sends the event log entries of this turn, as decided by the dialogue (no model call)."""
+        if self._recorder is None or self._dialogue is None:
+            return
+        try:
+            for entry in self._recorder.record(self._dialogue.logged, msg.text, spoken_at):
+                await self._send(ActionLoggedEvent(id=msg.id, entry=entry))
+        except asyncio.CancelledError:
+            raise
+        except WebSocketDisconnect:
+            raise
+        except Exception:
+            # The answer matters more than the log, and an error event would make the client
+            # show its "call 112" fallback; so this is only logged on the server.
+            logger.exception("Event log failed")
+
     async def _send(self, event: ServerEvent) -> None:
         async with self._send_lock:
             await self._ws.send_text(event.model_dump_json())
@@ -181,4 +236,6 @@ async def chat(ws: WebSocket) -> None:
     state = ws.app.state
     knowledge = state.knowledge
     dialogue = knowledge.dialogue(state.llm) if knowledge is not None else None
-    await _ChatSession(ws, state.llm, state.system_prompt, dialogue).run()
+    event_log = state.event_log
+    recorder = event_log.recorder() if event_log is not None else None
+    await _ChatSession(ws, state.llm, state.system_prompt, dialogue, recorder).run()

@@ -1,3 +1,4 @@
+import re
 import shutil
 from collections.abc import Callable
 from pathlib import Path
@@ -8,6 +9,7 @@ import yaml
 from fastapi.testclient import TestClient
 
 from app.knowledge import KnowledgeError, load_knowledge, load_scenario_prompts
+from app.knowledge.models import Scenario
 from app.main import create_app
 
 KNOWLEDGE = Path("../../knowledge")
@@ -48,7 +50,12 @@ def _edit_scenario(root: Path, name: str, change: Callable[[dict[str, Any]], Non
 def test_real_knowledge_base_is_valid() -> None:
     kb = load_knowledge(KNOWLEDGE)
 
-    assert {s.id for s in kb.scenarios} >= {"adult-bls", "adult-choking"}
+    assert {s.id for s in kb.scenarios} >= {
+        "adult-bls",
+        "adult-choking",
+        "adult-recovery-position",
+        "adult-severe-bleeding",
+    }
     assert {a.code for a in kb.actions} >= {"CHEST_COMPRESSIONS", "BACK_BLOWS"}
 
 
@@ -56,7 +63,7 @@ def test_bls_scenario_keeps_the_official_numbers() -> None:
     kb = load_knowledge(KNOWLEDGE)
     text = " ".join(u for sc in kb.scenarios for st in sc.steps for u in st.units)
 
-    # ERC 2025 / PRR: 5-6 cm, 100-120 per minute, 30:2, 10 seconds, check response before call.
+    # ERC 2025: 5-6 cm, 100-120 per minute, 30:2, 5 back blows, 10 seconds for two breaths.
     assert "co najmniej pięciu, ale nie więcej niż sześciu centymetrów" in text
     assert "od stu do stu dwudziestu uciśnięć na minutę" in text
     assert "trzydzieści uciśnięć do dwóch oddechów" in text
@@ -84,6 +91,88 @@ def test_choking_escalates_from_cough_to_back_blows_to_abdominal_thrusts() -> No
     assert "back_blows" in targets("encourage_cough")
     assert "abdominal_thrusts" in targets("back_blows")
     assert "call_and_alternate" in targets("abdominal_thrusts")
+
+
+def _scenario(scenario_id: str) -> Scenario:
+    return next(s for s in load_knowledge(KNOWLEDGE).scenarios if s.id == scenario_id)
+
+
+def test_every_step_cites_the_erc_guidelines() -> None:
+    kb = load_knowledge(KNOWLEDGE)
+
+    assert {s.id for s in kb.sources} == {"erc-2025-bls", "erc-2025-first-aid"}
+    for sc in kb.scenarios:
+        for step in sc.steps:
+            assert step.sources, f"{sc.id}/{step.id} cites no source"
+
+
+def test_choking_never_asks_an_unconscious_person_again_and_again() -> None:
+    choking = _scenario("adult-choking")
+
+    def targets(step_id: str) -> set[str | None]:
+        return {t.goto for t in choking.step(step_id).transitions}
+
+    # A person who stops responding goes to CPR from every stage, not only after the call.
+    for step_id in ("recognise", "encourage_cough", "back_blows", "abdominal_thrusts"):
+        assert "unresponsive" in targets(step_id), step_id
+    # A caller who only says "he does not answer" gets a question, not the same one again.
+    # A step with an outcome ends with a separate question, so that acknowledgements ("ok",
+    # "już") are absorbed before the question and the router sees a real answer.
+    for step_id in (
+        "check_conscious",
+        "encourage_cough",
+        "back_blows",
+        "abdominal_thrusts",
+        "call_and_alternate",
+    ):
+        assert choking.step(step_id).asks, step_id
+    assert "check_conscious" in targets("recognise")
+    assert targets("check_conscious") == {"encourage_cough", "unresponsive"}
+
+
+def test_recovery_position_is_not_used_after_trauma() -> None:
+    recovery = _scenario("adult-recovery-position")
+    start = recovery.step(recovery.start)
+
+    by_goto = {t.goto: t.when for t in start.transitions if t.goto}
+
+    assert "roll_to_side" in by_goto
+    assert "uraz" in by_goto["trauma_keep_still"]
+    assert "ROLL_TO_RECOVERY_POSITION" not in recovery.step("trauma_keep_still").actions
+
+
+def test_unresponsive_but_breathing_person_goes_to_the_recovery_position() -> None:
+    bls = _scenario("adult-bls")
+
+    handoffs = [t.handoff for t in bls.step("breathing_normally").transitions]
+
+    assert handoffs == ["adult-recovery-position/check_trauma"]
+
+
+def test_tourniquet_is_offered_only_after_direct_pressure_failed() -> None:
+    bleeding = _scenario("adult-severe-bleeding")
+    reaches_tourniquet = {
+        step.id
+        for step in bleeding.steps
+        if any(t.goto in {"tourniquet", "tourniquet_check"} for t in step.transitions)
+    }
+
+    assert reaches_tourniquet == {"direct_pressure", "tourniquet_check"}
+    assert "APPLY_TOURNIQUET" not in bleeding.step("direct_pressure").actions
+    assert "pięciu do siedmiu centymetrów" in " ".join(bleeding.step("tourniquet").units)
+    assert "Zapisz na opasce godzinę" in " ".join(bleeding.step("tourniquet").units)
+
+
+def test_bls_uses_the_aed_and_returns_to_compressions() -> None:
+    bls = _scenario("adult-bls")
+
+    assert {t.goto for t in bls.step("aed_shock").transitions} == {"resume_compressions"}
+    assert {t.goto for t in bls.step("aed_analyse").transitions} == {
+        "aed_shock",
+        "resume_compressions",
+    }
+    interrupts = {t.goto for t in bls.step("compressions_30_2").transitions if t.interrupt}
+    assert interrupts == {"aed_attach", "aed_analyse"}
 
 
 def test_citations_are_not_checked_without_source_files(kb_copy: Path) -> None:
@@ -230,3 +319,117 @@ def test_knowledge_needs_the_scenario_prompts_file(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="needs prompts.knowledge"):
         create_app(str(config))
+
+
+def test_an_obstacle_branch_is_also_an_interrupt() -> None:
+    for scenario_id in ("adult-bls", "adult-severe-bleeding"):
+        phone = [t for t in _scenario(scenario_id).step("call_emergency").transitions if t.obstacle]
+
+        assert len(phone) == 1
+        assert phone[0].interrupt
+
+
+def test_bleeding_hands_off_to_the_response_check_in_every_step_until_it_is_over() -> None:
+    bleeding = _scenario("adult-severe-bleeding")
+    steps = ["direct_pressure", "pressure_dressing", "tourniquet_check", "tourniquet"]
+    steps += ["keep_pressing", "after_bleeding"]
+
+    for step_id in steps:
+        hand_offs = [
+            t
+            for t in bleeding.step(step_id).transitions
+            if t.handoff == "adult-bls/check_response" and t.interrupt
+        ]
+        assert hand_offs, step_id
+
+
+def test_choking_lays_the_unresponsive_person_on_the_back_before_cpr() -> None:
+    units = _scenario("adult-choking").step("unresponsive").units
+
+    assert "na plecach" in units[0]
+    assert "dziewięćset dziewięćdziesiąt dziewięć" in units[1]
+
+
+def test_the_tourniquet_is_called_staza_not_staz() -> None:
+    # "staż" is an internship; the Polish word for the tourniquet is "staza".
+    for path in (KNOWLEDGE / "scenarios").glob("*.yaml"):
+        assert not re.search(r"\bstaż", path.read_text(encoding="utf-8")), path.name
+
+
+def test_scenarios_log_the_actions_the_rescuers_want_to_see_afterwards() -> None:
+    bls = _scenario("adult-bls")
+    bleeding = _scenario("adult-severe-bleeding")
+
+    compressions = [i.action for i in bls.step("chest_compressions").instructions]
+    tourniquet = [i.action for i in bleeding.step("tourniquet").instructions]
+
+    assert "CHEST_COMPRESSIONS" in compressions  # how long CPR has been going on
+    assert tourniquet[0] == "APPLY_TOURNIQUET"  # how long the tourniquet has been on
+    assert "NOTE_TOURNIQUET_TIME" in tourniquet
+
+
+def test_scenarios_log_when_the_person_stops_responding() -> None:
+    choking = _scenario("adult-choking")
+    logs = [t.log for step in choking.steps for t in step.transitions if t.goto == "unresponsive"]
+
+    assert logs and set(logs) == {"UNRESPONSIVE"}
+
+
+def test_a_dictionary_entry_is_an_action_unless_it_is_marked_as_an_observation() -> None:
+    actions = {a.code: a for a in load_knowledge(KNOWLEDGE).actions}
+
+    assert actions["CHEST_COMPRESSIONS"].kind == "action"
+    assert actions["UNRESPONSIVE"].kind == "observation"
+
+
+def test_an_instruction_may_log_only_an_action_of_its_step(kb_copy: Path) -> None:
+    _edit_scenario(
+        kb_copy,
+        "adult-bls",
+        lambda d: d["steps"][2]["instructions"][0].update(action="CHEST_COMPRESSIONS"),
+    )
+
+    with pytest.raises(KnowledgeError, match="not among the actions of the step"):
+        load_knowledge(kb_copy)
+
+
+def test_an_instruction_cannot_log_an_observation(kb_copy: Path) -> None:
+    def make_observation(d: dict[str, Any]) -> None:
+        d["steps"][2]["actions"].append("UNRESPONSIVE")
+        d["steps"][2]["instructions"][0]["action"] = "UNRESPONSIVE"
+
+    _edit_scenario(kb_copy, "adult-bls", make_observation)
+
+    with pytest.raises(KnowledgeError, match="is an observation, not an action"):
+        load_knowledge(kb_copy)
+
+
+def test_an_unknown_action_in_an_instruction_is_rejected(kb_copy: Path) -> None:
+    _edit_scenario(
+        kb_copy, "adult-bls", lambda d: d["steps"][2]["instructions"][0].update(action="NOPE")
+    )
+
+    with pytest.raises(KnowledgeError, match="unknown action 'NOPE'"):
+        load_knowledge(kb_copy)
+
+
+def test_a_transition_may_log_only_an_observation(kb_copy: Path) -> None:
+    _edit_scenario(
+        kb_copy,
+        "adult-bls",
+        lambda d: d["steps"][0]["transitions"][0].update(log="CHEST_COMPRESSIONS"),
+    )
+
+    with pytest.raises(KnowledgeError, match="is not an observation of the dictionary"):
+        load_knowledge(kb_copy)
+
+
+def test_an_unconditional_transition_cannot_log(kb_copy: Path) -> None:
+    def log_zawsze(d: dict[str, Any]) -> None:
+        step = next(s for s in d["steps"] if s["id"] == "breathing_normally")
+        step["transitions"][0]["log"] = "UNRESPONSIVE"
+
+    _edit_scenario(kb_copy, "adult-bls", log_zawsze)
+
+    with pytest.raises(KnowledgeError, match="cannot log"):
+        load_knowledge(kb_copy)

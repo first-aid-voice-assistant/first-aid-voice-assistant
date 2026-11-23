@@ -13,4 +13,5 @@ llm:
     temperature: 0.3
 rag: { enabled: false }
 knowledge: { enabled: true, path: ../../knowledge }   # scenarios from knowledge/ in the prompt
+event_log: { enabled: false }   # on only for clients that handle the `action_logged` event
 prompts: { system: prompts/system_v1.md, knowledge: prompts/scenario_v1.yaml }

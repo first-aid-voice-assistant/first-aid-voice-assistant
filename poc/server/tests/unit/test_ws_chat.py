@@ -56,6 +56,19 @@ def test_history_is_sent_to_the_model(client: TestClient) -> None:
     assert "4 messages" in done["text"]
 
 
+def test_long_history_is_accepted_and_trimmed(client: TestClient) -> None:
+    history = [
+        {"role": "user" if i % 2 == 0 else "assistant", "content": f"wiadomość {i}"}
+        for i in range(120)
+    ]
+    with client.websocket_connect("/v1/chat") as ws:
+        ws.send_json({"type": "ask", "id": "a1", "text": "Dalej uciskam", "history": history})
+        done = receive_until(ws, "done", "a1")[-1]
+
+    # system prompt + the latest 20 history messages + user text
+    assert "22 messages" in done["text"]
+
+
 def test_cancel_stops_the_answer(client: TestClient) -> None:
     client.app.state.llm = FakeLLM(reply=SLOW_REPLY, delay=0.05)  # type: ignore[attr-defined]
     with client.websocket_connect("/v1/chat") as ws:

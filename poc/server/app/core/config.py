@@ -21,6 +21,9 @@ class KnowledgeConfig(BaseModel):
 
     enabled: bool = False
     path: str = "../../knowledge"  # repository root's knowledge/, relative to poc/server/
+    # Say the exact text of the scenarios (and fixed phrases from the scenario prompts) instead of
+    # letting the model write the answer; the model then only classifies what the user said.
+    verbatim: bool = False
 
 
 class PromptsConfig(BaseModel):
@@ -28,11 +31,23 @@ class PromptsConfig(BaseModel):
     knowledge: str | None = None  # template of the knowledge section; needed when it is enabled
 
 
+class EventLogConfig(BaseModel):
+    """Actions the user confirmed and observations they reported, sent to the client as log entries.
+
+    The scenarios decide what is logged (`action` and `log` in `knowledge/`), so no model call is
+    made. Needs `knowledge.enabled` (the dictionary comes from there). Leave it off for clients
+    that do not know the `action_logged` event yet.
+    """
+
+    enabled: bool = False
+
+
 class AppConfig(BaseModel):
     asr: ProviderConfig
     llm: ProviderConfig
     rag: RAGConfig = Field(default_factory=RAGConfig)
     knowledge: KnowledgeConfig = Field(default_factory=KnowledgeConfig)
+    event_log: EventLogConfig = Field(default_factory=EventLogConfig)
     prompts: PromptsConfig
 
 

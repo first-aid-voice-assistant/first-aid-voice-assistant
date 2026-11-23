@@ -1,0 +1,40 @@
+# Silne krwawienie z nogi: ucisk, opatrunek, opaska uciskowa, utrata przytomności
+# Uruchomienie (serwer musi działać): uv run python scripts/chat_repl.py --script scripts/dialogues/adult-severe-bleeding.txt
+# Jedna linia = jedna wypowiedź użytkownika; linie z # są pomijane przez skrypt.
+# Nad każdą wypowiedzią jest komentarz: krok scenariusza i to, co asystent powinien powiedzieć
+# (prawie słowo w słowo; model może skrócić). Wypowiedzi są pisane tak, jak mówi człowiek.
+
+# Oczekiwane: [adult-severe-bleeding/safety] Upewnij się, że Ty i poszkodowany jesteście bezpieczni, na przykład że nie zagraża Wam ruch uliczny, rozlane substancje albo agresywna osoba.
+Pomocy, kolega skaleczył się piłą na budowie i z nogi bardzo mocno leci krew
+# Oczekiwane (przejście do adult-severe-bleeding/call_emergency): Jeśli ktoś jest z Tobą, poproś, żeby zadzwonił pod dziewięćset dziewięćdziesiąt dziewięć. Jeśli jesteś sam, zadzwoń sam.
+Tak, jest bezpiecznie, piła jest wyłączona
+# Oczekiwane: [adult-severe-bleeding/call_emergency] Włącz w telefonie tryb głośnomówiący, żeby mieć wolne ręce.
+Dzwonię na pogotowie
+# Oczekiwane (przejście do adult-severe-bleeding/direct_pressure): Mocno uciśnij dłonią ranę, w miejscu krwawienia.
+Mam włączony głośnik, dyspozytor odebrał
+# Oczekiwane: [adult-severe-bleeding/direct_pressure] Jeśli masz opatrunek, zwykły albo hemostatyczny, włóż go bezpośrednio w ranę i mocno uciśnij go dłonią od góry.
+Uciskam ranę ręką
+# Oczekiwane: [adult-severe-bleeding/direct_pressure] Nie przestawaj uciskać.
+Mam apteczkę, wkładam gazę w ranę i uciskam
+# Oczekiwane: [adult-severe-bleeding/direct_pressure] Czy krwawienie ustało albo jest pod kontrolą?
+Trzymam ucisk
+# Oczekiwane (przejście do adult-severe-bleeding/tourniquet_check): Jeśli krwawienie z ręki lub nogi nie ustaje mimo ucisku, potrzebna jest opaska uciskowa, czyli staza.
+Nie, krwawienie nie ustaje, a rana jest na udzie
+# Oczekiwane: [adult-severe-bleeding/tourniquet_check] Czy masz fabryczną opaskę uciskową i wiesz, jak jej użyć?
+Rozumiem
+# Oczekiwane (przejście do adult-severe-bleeding/tourniquet): Załóż opaskę na kończynę, około pięciu do siedmiu centymetrów powyżej rany, ale nie na stawie.
+Tak, mamy w apteczce fabryczną opaskę i byłem na kursie, wiem, jak jej użyć
+# Oczekiwane: [adult-severe-bleeding/tourniquet] Zaciągaj opaskę, aż krwawienie zwolni i ustanie. Może to być bolesne dla poszkodowanego.
+Założyłem opaskę nad raną, kilka centymetrów powyżej
+# Oczekiwane: [adult-severe-bleeding/tourniquet] Zapisz na opasce godzinę jej założenia.
+Zaciągam ją, krew już zwalnia
+# Oczekiwane: [adult-severe-bleeding/tourniquet] Nie zdejmuj ani nie poluzowuj opaski. Może to zrobić tylko pracownik ochrony zdrowia.
+Zapisałem godzinę na opasce
+# Oczekiwane: [adult-severe-bleeding/tourniquet] Jeśli krwawienie nie ustaje, załóż drugą opaskę powyżej pierwszej.
+Nie ruszam jej
+# Oczekiwane: [adult-severe-bleeding/tourniquet] Czy krwawienie ustało albo wyraźnie zwolniło?
+Nie potrzebuję drugiej opaski
+# Oczekiwane (przejście do adult-severe-bleeding/after_bleeding): Dobrze. Zostań z poszkodowanym, obserwuj go i słuchaj poleceń dyspozytora. Jeśli krwawienie wróci, ponownie mocno uciśnij ranę.
+Tak, krwawienie ustało
+# Oczekiwane (przejście do adult-bls/check_response): Delikatnie potrząśnij poszkodowanego za ramiona i głośno zapytaj, czy wszystko w porządku.
+Kolega przestał reagować, nie odpowiada

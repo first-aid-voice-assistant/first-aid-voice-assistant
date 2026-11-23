@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Created** | 2026-10-26 |
-| **Version** | 0.4 |
+| **Version** | 0.10 |
 
 ## Purpose
 
@@ -22,12 +22,14 @@ request ──▶ │ api/  ──▶ pipeline/prompt.py ──▶ providers/reg
 | Module | Responsibility |
 |---|---|
 | `app/main.py` | App factory (`create_app`): loads settings and the YAML config, builds the LLM provider, reads the system prompt, mounts the routers. |
-| `app/core/config.py` | `Settings` (environment variables / `.env`) and `AppConfig` (YAML: ASR, LLM, RAG, prompts). |
+| `app/core/config.py` | `Settings` (environment variables / `.env`) and `AppConfig` (YAML: ASR, LLM, RAG, knowledge, event log, prompts). |
 | `app/api/rest.py` | Public endpoints: `GET /health`, `GET /v1/providers`. |
 | `app/api/ws.py` | `WS /v1/chat`: the mobile app's chat – streams the answer, cancels it on request (see below). |
 | `app/api/dev.py` | Dev-only `GET /dev` (test page) and `POST /dev/chat`, mounted only when `DEV_MODE=true`. |
 | `app/pipeline/prompt.py` | Builds the message list: system prompt + history + user text. |
+| `app/pipeline/completion.py` | `complete()`: a short side call to the model that returns the whole answer at once (temperature 0); used for routing (the event log makes no model call). |
 | `app/knowledge/` | Loads and validates `knowledge/` (`loader.py`, `models.py`), reads the wording of the guided conversation (`prompts.py`) and walks through a scenario one instruction at a time (`dialogue.py`). |
+| `app/eventlog/` | The event log: `models.py` (`EventLogEntry`, the shared entry format), `recorder.py` (entries with `id`, `elapsed_s`, repeats skipped, from the codes the dialogue reports), `runtime.py` (what `main.py` builds). |
 | `app/providers/base.py` | Provider interfaces and data types (`Message`, `LLMOptions`, `LLMDelta`, `LLMDone`, `LLMProvider`). |
 | `app/providers/registry.py` | Maps the provider name from the config to a class (`@register_llm("<name>")`, `build_llm`). |
 | `app/providers/llm/` | LLM adapters: `litellm` (Ollama, vLLM, commercial APIs) and `fake` (tests, no model; `delay` imitates a slow model). |
@@ -41,13 +43,14 @@ Used by the mobile app. Messages are JSON objects with a `type`.
 
 | Direction | `type` | Fields | Meaning |
 |---|---|---|---|
-| app → server | `ask` | `id`, `text` (1–2000 chars), `history` (`[{role: user/assistant, content}]`, up to 50) | New question; cancels the answer in progress |
+| app → server | `ask` | `id`, `text` (1–2000 chars), `history` (`[{role: user/assistant, content}]`, up to 500; the model gets only the latest 20 messages), optional `spoken_at` (ISO 8601 with a time zone: when the user finished speaking) | New question; cancels the answer in progress |
 | app → server | `cancel` | `id` | Stop that answer (e.g. the user interrupted it) |
 | server → app | `step` | `id`, `media` (e.g. `cpr/compressions`, or `null` before a scenario is chosen) | Sent before the first `delta` when the scenarios are on: the picture the app shows while the answer is said |
 | server → app | `delta` | `id`, `text` | Next piece of the answer |
 | server → app | `done` | `id`, `text`, `first_token_ms`, `total_ms` | Full answer and timings |
 | server → app | `cancelled` | `id` | The answer was stopped |
 | server → app | `error` | `id` (or `null` for an invalid message), `message` | The model failed or the message was invalid; the connection stays open |
+| server → app | `action_logged` | `id` (of the question), `entry` (see "Event log entry" in `docs/project/architecture.md`) | An action the user confirmed or an observation they reported, as the scenario defines them (no model call); sent only when `event_log.enabled`, right after the dialogue has classified the words and before the answer starts |
 
 1. `api/ws.py` reads messages in a loop; each `ask` starts a task that streams the answer, so the loop keeps reading and can cancel it.
 2. `pipeline/prompt.py` builds `[system prompt, *history, question]`. The history comes from the app with every question; the only state the server keeps is the position in the scenario (see Guided scenarios), for as long as the connection lives.
@@ -60,11 +63,27 @@ The scenarios of `knowledge/` (state machines in YAML; steps may cite their sour
 
 1. At start-up `main.py` builds a `KnowledgeRuntime`: `load_knowledge` (path from `knowledge.path`) checks that every transition and action exists and that every step is reachable, and, if `knowledge/sources/` has files, that every cited source and section exists; `load_scenario_prompts` reads the wording from `prompts/scenario_v1.yaml`. Otherwise the server does not start. The rules from that file are appended once to the system prompt.
 2. Every WebSocket connection gets its own `ScenarioDialogue` (`app/knowledge/dialogue.py`), which holds the cursor: scenario, step and the index of the next thing to say. Before every answer `begin_turn` returns the task for the model ("say this instruction", "repeat", "no procedure yet" or "the procedure is finished"), which `ws.py` appends to the system prompt of that turn. It stays one system message.
-3. Inside a step the cursor moves on by itself: the user's next words are taken as "done". A step says its instructions one per turn, then its question (`asks`). When everything in a step has been said, a short side call to the model gets the user's answer and the numbered transitions of the step and returns one digit; `0`, a number out of range or any reply that is not a bare digit (punctuation around it is fine) means "no transition yet", and the assistant repeats instead of guessing. The first turn chooses the scenario the same way, from `trigger`.
+3. Inside a step the cursor moves on by itself: the user's next words are taken as "done". A step says its instructions one per turn, then its question (`asks`). When everything in a step has been said, a short side call to the model gets the user's answer and the numbered transitions of the step and returns one digit; `0`, a number out of range or any reply that is not a bare digit (punctuation around it is fine) means "no transition yet", and the assistant repeats instead of guessing. The first turn chooses the scenario the same way, from `trigger`. `when: zawsze` (always) is taken without asking; the `obstacle` branch is a candidate only when the intent of the words is an obstacle, so a step with `zawsze` plus an `obstacle` branch goes on after any plain "ok". Branches marked `interrupt` are events ("the person stopped breathing", "the AED has arrived"): in every turn of a step that has them a separate short call (`route_event`) asks whether the user has just reported one, so the cursor can leave a long step at once; the phone branch (`obstacle`) is chosen by the intent of the user's words (`route_intent`).
 4. The cursor moves only when the model has finished the answer, so an interrupted answer is said again.
 5. Every instruction has a picture name (`media` in the scenario, per step or per instruction). After `begin_turn`, `ScenarioDialogue.media` holds the picture of the instruction of this turn; a repeat, a question outside the procedure and the end of the procedure keep the picture of the last instruction. `ws.py` sends it as `step` before the answer. The server only names the picture; the files live in the app.
 
+**Verbatim mode** (`knowledge.verbatim: true`, e.g. `configs/experiments/qwen25-7b-verbatim-compose.yaml`). The model never writes the answer: the server says the exact text of the scenario (the instruction, or the last one again when it repeats), and the fixed phrases of `spoken` in `prompts/scenario_v1.yaml` for the cases the scenario does not cover (no procedure yet: stay calm, no drugs, call 112; stuck; fear / question / something new about the person / other, each followed by the last instruction). The model only classifies: the scenario, the intent, the transition, the event and (`route_interject`) the kind of the words outside the procedure. `ws.py` sends the text as one `delta` and `done`, so the app is unchanged; there is no model generation, so the answer starts at once. The price: no free-form wording (the assistant cannot acknowledge or correct the user in its own words), so a wrong transition is the only way to a wrong answer.
+
 Limits: the state lives only as long as the WebSocket connection (a reconnect restarts the scenario); the assistant assumes the user did what it asked when they speak again; each choice of a transition costs one extra model call before the answer starts. `POST /dev/chat` is stateless, so each request starts a scenario from its beginning.
+
+## Event log
+
+Records, in order and with timestamps, what the rescuer did and what changed, instead of the raw conversation. The scenarios decide what is logged, so no model is asked; the phone keeps the log. The decision and the measurements behind it: [ADR 0003](../../../docs/adr/0003-event-log-from-scenarios.md) (which replaces the detection part of [ADR 0002](../../../docs/adr/0002-event-log-detection.md)).
+
+1. In `knowledge/`, an instruction names the action it asks for (`action`), and a transition names the observation it records (`log`). The dictionary (`actions.yaml`) marks every code as an `action` or an `observation`; the loader refuses a scenario that logs an unknown code, logs an observation from an instruction, or names an action that is not among the `actions` of the step.
+2. `ScenarioDialogue.begin_turn` fills `logged` while it classifies the user's words (the same calls it makes anyway). The action of the instruction the user is answering is logged when the intent is a confirmation (`POTWIERDZENIE`) and the words are not an announcement ("zaraz zadzwonię", the pattern is `announcement` in `prompts/scenario_v1.yaml`) and the user did not just report an event (an interrupt branch). Questions, problems, refusals and answers to `asks` log nothing. The `log` of a branch that is taken because of the user's words follows, in the same turn.
+3. At start-up `main.py` builds an `EventLogRuntime` (the dictionary of `knowledge/`) when `event_log.enabled`. It needs `knowledge.enabled`, otherwise the server does not start. Every WebSocket connection gets its own `EventLogRecorder`.
+4. After `begin_turn`, `ws.py` turns `logged` into entries: `timestamp` is `spoken_at` (the time the server received the question if the app sent none), `elapsed_s` counts from the first entry, `transcript` is the user's words. An action repeated right after itself is logged once and observations never interrupt that chain; an observation is logged every time it is reported.
+5. Each entry goes to the app as an `action_logged` event before the `step` event of the answer. A failure of the recorder is only logged on the server: it does not stop the answer and does not send `error` (that triggers the client's "call 112" fallback).
+
+What rescuers can read from the log afterwards: how long a tourniquet has been on (`APPLY_TOURNIQUET`, `NOTE_TOURNIQUET_TIME`), how long CPR has been going on (the first `CHEST_COMPRESSIONS`), when the person stopped responding (`UNRESPONSIVE`), when the AED came (`AED_ARRIVED`) and when the shock was given (`AED_SHOCK`).
+
+Limits: only what the scenario asked for and the user confirmed, or what a branch records, is logged: an action reported out of order or several actions in one sentence give only the confirmed one; the quality of the log depends on the intent classification (a reply taken for something other than a confirmation is not logged); if the user starts speaking again while the dialogue is still classifying the previous words, that turn is cancelled and its entry may be lost; the recorder's state (last action) is lost on reconnect, so a continuing action may be logged again. A client that does not know `action_logged` must run with `event_log.enabled: false` (the default in the shipped configs).
 
 ## Request flow (`POST /dev/chat`)
 
@@ -75,8 +94,10 @@ Limits: the state lives only as long as the WebSocket connection (a reconnect re
 
 ## Configuration
 
-- `configs/*.yaml` select the providers and their parameters (`APP_CONFIG` picks the file): `base.yaml` (Docker), `gemma.yaml` (app on the host, Gemma 3 1B in the Ollama container), `bielik.yaml` (app on the host, Bielik 4.5B v3 in the Ollama container), `fake.yaml` (no model, streams a fixed Polish answer word by word with a delay – for UI work and trying the app; tests swap in an echoing fake).
-- `knowledge: {enabled, path}` and `prompts.knowledge` turn on the scenarios from `knowledge/`; in Docker the folder is mounted read-only at `/knowledge`, which is where `../../knowledge` points from `/app`.
+- `configs/*.yaml` select the providers and their parameters (`APP_CONFIG` picks the file): `base.yaml` (Docker), `gemma.yaml` (app on the host, Gemma 3 1B in the Ollama container), `bielik.yaml` (app on the host, Bielik 4.5B v3 in the Ollama container), `qwen.yaml` (app on the host, Qwen2.5 7B in the Ollama container; needs the GPU override), `fake.yaml` (no model, streams a fixed Polish answer word by word with a delay – for UI work and trying the app; tests swap in an echoing fake).
+- `knowledge: {enabled, path, verbatim}` and `prompts.knowledge` turn on the scenarios from `knowledge/` (`verbatim` – see "Guided scenarios"); in Docker the folder is mounted read-only at `/knowledge`, which is where `../../knowledge` points from `/app`.
+- `event_log: {enabled}` turns on the event log (needs `knowledge`). It is off in the shipped configs until the mobile app handles `action_logged`.
+- `docker-compose.gpu.yml` gives `llm` the GPU and tunes Ollama for a small one (flash attention, quantised KV cache, one request at a time, model kept in memory); without it a 7B model runs on the CPU and exceeds the 60 s call timeout.
 - `.env` holds secrets and environment settings (`DEV_MODE`, API keys, `REDIS_URL`).
 - Experiments with other models go to `configs/experiments/`.
 
@@ -96,7 +117,7 @@ Limits: the state lives only as long as the WebSocket connection (a reconnect re
 ## Not implemented yet
 
 - ASR / audio input (in the demo, speech recognition is planned on the phone).
-- Sessions that outlive a WebSocket connection (the scenario position is kept only per connection), the event log.
+- Sessions that outlive a WebSocket connection (the scenario position and the event log recorder state are kept only per connection).
 - Authentication of the WebSocket (PoC in a local network only).
 - The analysis endpoint for the mobile app (recognised actions and the next step).
 - RAG over the knowledge base.
@@ -109,3 +130,9 @@ Limits: the state lives only as long as the WebSocket connection (a reconnect re
 | 0.2 | 2026-10-29 | `WS /v1/chat` with streamed answers, cancelling and history sent by the app; `gemma.yaml`, `bielik.yaml`; `fake.yaml` streams a fixed answer slowly |
 | 0.3 | 2026-10-29 | Guided scenarios: `app/knowledge/` (loader, validation, `ScenarioDialogue` that gives the model one instruction per turn), `prompts/scenario_v1.yaml`, `knowledge` config section; the server keeps the scenario position per WebSocket connection |
 | 0.4 | 2026-11-08 | `step` event with the picture (`media`) of the current instruction, sent before the answer |
+| 0.5 | 2026-11-08 | Event log: `app/eventlog/` (detector, recorder), `spoken_at` in `ask`, `action_logged` event, `event_log` config section, `prompts/event_log_v1.yaml`, `pipeline/completion.py` |
+| 0.6 | 2026-11-08 | `configs/qwen.yaml`; GPU override tuned for a small GPU; command for Claude Code (`/dev`) |
+| 0.7 | 2026-11-18 | A long history is accepted (up to 500 messages) and trimmed to the latest 20 for the model, so a long rescue no longer ends in `Invalid message` |
+| 0.8 | 2026-11-18 | Event branches (`interrupt`) are checked every turn of a step (`route_event`), the phone branch is `obstacle`; `when: zawsze` is taken without asking the model; verbatim mode (`knowledge.verbatim`) says the exact scenario text and fixed phrases (`spoken`), the model only classifies |
+| 0.9 | 2026-11-18 | The event log is filled by the scenarios (`action` on instructions, `log` on transitions, observations in the dictionary) instead of a model call; the detector, `prompts/event_log_v1.yaml` and `prompts.event_log` are removed (ADR 0003) |
+| 0.10 | 2026-11-22 | `call_emergency` of the BLS and bleeding scenarios goes on with `when: zawsze` (the call is confirmed by its own instruction); the `obstacle` branch is a candidate only for words judged an obstacle |

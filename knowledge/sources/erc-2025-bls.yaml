@@ -1,0 +1,28 @@
+# Description of a source document. The original PDF lives in knowledge/raw/ (not in git).
+# `sections` are the headings that steps may cite (`section: "<heading>"` or
+# `"<heading> – <detail>"`).
+id: erc-2025-bls
+title: European Resuscitation Council Guidelines 2025 – Adult Basic Life Support
+publisher: European Resuscitation Council (ERC)
+version: ERC Guidelines 2025
+published: "2025"
+reference: Resuscitation 215 (2025) 110771
+urls:
+  - https://doi.org/10.1016/j.resuscitation.2025.110771
+accessed: 2026-11-15
+scope: [layperson]
+raw:
+  - European-Resuscitation-Council-Guidelines-2025-Adu_10.pdf
+sections:
+  - Concise resuscitation guidelines for all responders
+  - Recognising cardiac arrest
+  - Alerting the emergency services
+  - Role of the dispatcher
+  - High quality chest compressions
+  - Rescue breaths
+  - Using an automated external defibrillator (AED)
+  - Safety
+notes: >-
+  The "BLS step by step" and numbered figures (Fig. 7, 8a–8o) are drawings; where a step relies on
+  a detail that is visible only there, the step says so in its `note`. Management of choking
+  was moved from this guideline to the ERC 2025 First Aid guideline.
