@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../data/repositories/answer_speaker.dart';
 import '../../../data/repositories/assistant_repository.dart';
+import '../../../data/repositories/event_log_repository.dart';
 import '../../../data/repositories/speech_input.dart';
 import '../../../data/repositories/speech_output.dart';
 import '../../../data/services/beat_clock.dart';
@@ -11,6 +12,7 @@ import '../../../data/services/metronome_sound.dart';
 import '../../../data/services/screen_wake.dart';
 import '../../../domain/models/chat_message.dart';
 import '../../../domain/models/conversation_entry.dart';
+import '../../../domain/models/event_log_entry.dart';
 import '../../../domain/models/illustration.dart';
 import '../../../domain/models/utterance.dart';
 import '../../../utils/counting.dart';
@@ -31,6 +33,8 @@ const Duration compressionReminderAfter = Duration(seconds: 60);
 
 const String compressionReminder = 'Uciskaj dalej w rytm sygnału.';
 
+const Duration loggedNoticeDuration = Duration(seconds: 4);
+
 const String noServerAnswer =
     'Nie mam połączenia z serwerem asystenta. '
     'Jeśli to nagły wypadek, zadzwoń pod numer sto dwanaście.';
@@ -43,11 +47,14 @@ class ConversationViewModel extends ChangeNotifier {
     this._metronome,
     BeatClock? beatClock,
     this._screenWake,
+    EventLogRepository? eventLog,
     this.endOfTurn = endOfTurnSilence,
     this.listenAgain = listenAgainAfter,
     this.reminderAfter = compressionReminderAfter,
+    this.loggedNotice = loggedNoticeDuration,
     DateTime Function()? clock,
   }) : _beatClock = beatClock ?? TimerBeatClock(),
+       _eventLog = eventLog ?? EventLogRepository(),
        _now = clock ?? DateTime.now;
 
   final SpeechInput _input;
@@ -59,6 +66,8 @@ class ConversationViewModel extends ChangeNotifier {
   final Duration endOfTurn;
   final Duration listenAgain;
   final Duration reminderAfter;
+  final Duration loggedNotice;
+  final EventLogRepository _eventLog;
   final DateTime Function() _now;
 
   final List<ConversationEntry> _entries = [];
@@ -77,6 +86,9 @@ class ConversationViewModel extends ChangeNotifier {
   StreamSubscription<String>? _partials;
   StreamSubscription<Utterance>? _recognized;
   StreamSubscription<AnswerEvent>? _answer;
+  StreamSubscription<EventLogEntry>? _logged;
+  EventLogEntry? _lastLogged;
+  Timer? _noticeTimer;
   AnswerSpeaker? _speaker;
   int? _answerIndex;
   String? _media;
@@ -108,6 +120,9 @@ class ConversationViewModel extends ChangeNotifier {
   Duration get mediaShownFor =>
       _mediaSince == null ? Duration.zero : _now().difference(_mediaSince!);
   Stream<void> get beats => _beats.stream;
+  List<EventLogEntry> get eventLog => _eventLog.entries;
+  EventLogEntry? get lastLogged => _lastLogged;
+  String get eventLogJson => _eventLog.toJson();
 
   bool get metronomeAudible => Illustrations.of(_media).hasMetronome;
 
@@ -155,6 +170,7 @@ class ConversationViewModel extends ChangeNotifier {
   Future<void> initialize() async {
     _partials ??= _input.partialText.listen(_onPartialText);
     _recognized ??= _input.utterances.listen(_onUtterance);
+    _logged ??= _assistant.loggedActions.listen(_onActionLogged);
     unawaited(_screenWake?.keepOn());
     _downloadProgress = null;
     _preparingLabel = _input.label;
@@ -400,7 +416,11 @@ class ConversationViewModel extends ChangeNotifier {
       ),
     );
     _answer = _assistant
-        .ask(text: question.content, history: history)
+        .ask(
+          text: question.content,
+          history: history,
+          spokenAt: utterance.endedAt,
+        )
         .listen((event) => _onAnswerEvent(event, speaker));
   }
 
@@ -470,6 +490,19 @@ class ConversationViewModel extends ChangeNotifier {
           message: 'Brak odpowiedzi serwera. W nagłym wypadku dzwoń pod 112.',
         );
     }
+  }
+
+  void _onActionLogged(EventLogEntry entry) {
+    if (_disposed) return;
+    final logged = _eventLog.add(entry);
+    if (logged == null) return;
+    _lastLogged = logged;
+    _noticeTimer?.cancel();
+    _noticeTimer = Timer(loggedNotice, () {
+      _lastLogged = null;
+      _notify();
+    });
+    notifyListeners();
   }
 
   void _showMedia(String? media) {
@@ -559,6 +592,8 @@ class ConversationViewModel extends ChangeNotifier {
     _disposed = true;
     _cancelTurnTimer();
     _listenTimer?.cancel();
+    _noticeTimer?.cancel();
+    _logged?.cancel();
     _beatClock.stop();
     _beats.close();
     _partials?.cancel();

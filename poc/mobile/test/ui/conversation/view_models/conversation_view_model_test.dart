@@ -396,4 +396,50 @@ void main() {
     expect(screenWake.on, isFalse);
     expect(beatClock.isRunning, isFalse);
   });
+
+  group('event log', () {
+    test('the question carries the time the user finished speaking', () async {
+      await start();
+      input.emitUtterance(
+        'Uciskam',
+        endedAt: DateTime.utc(2026, 10, 27, 13, 21, 2),
+      );
+      await settle();
+
+      expect(asks().single['spoken_at'], '2026-10-27T13:21:02.000Z');
+    });
+
+    test('a logged action goes to the log and is shown for a while', () async {
+      viewModel = ConversationViewModel(
+        input: input,
+        output: output,
+        assistant: AssistantRepository(
+          socket: socket,
+          serverUri: () => Uri.parse('ws://server:8000/v1/chat'),
+        ),
+        beatClock: beatClock,
+        endOfTurn: Duration.zero,
+        listenAgain: Duration.zero,
+        loggedNotice: const Duration(milliseconds: 20),
+        clock: () => now,
+      );
+      final connection = await askFirstQuestion();
+
+      connection.logged(
+        'CHECK_BREATHING',
+        at: DateTime.utc(2026, 10, 27, 13, 21, 2),
+        label: 'Sprawdzenie oddechu',
+      );
+      await settle();
+
+      expect(viewModel.eventLog.single.displayName, 'Sprawdzenie oddechu');
+      expect(viewModel.lastLogged?.action, 'CHECK_BREATHING');
+      expect(viewModel.eventLogJson, contains('CHECK_BREATHING'));
+
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+
+      expect(viewModel.lastLogged, isNull);
+      expect(viewModel.eventLog, hasLength(1));
+    });
+  });
 }

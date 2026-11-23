@@ -1,17 +1,20 @@
 import 'dart:convert';
 
 import '../../domain/models/chat_message.dart';
+import '../../domain/models/event_log_entry.dart';
 
 class AskRequest {
   const AskRequest({
     required this.id,
     required this.text,
     required this.history,
+    this.spokenAt,
   });
 
   final String id;
   final String text;
   final List<ChatMessage> history;
+  final DateTime? spokenAt;
 
   String encode() => jsonEncode({
     'type': 'ask',
@@ -21,6 +24,7 @@ class AskRequest {
       for (final message in history)
         {'role': message.role.name, 'content': message.content},
     ],
+    if (spokenAt != null) 'spoken_at': spokenAt!.toUtc().toIso8601String(),
   });
 }
 
@@ -37,7 +41,7 @@ sealed class ServerEvent {
 
   final String? id;
 
-  static ServerEvent decode(String raw) {
+  static ServerEvent? decode(String raw) {
     final json = jsonDecode(raw);
     if (json is! Map<String, dynamic>) {
       throw const FormatException('Server event is not an object');
@@ -54,9 +58,37 @@ sealed class ServerEvent {
       ),
       'cancelled' => ServerCancelled(id: id),
       'error' => ServerError(id: id, message: json['message'] as String),
-      final type => throw FormatException('Unknown server event: $type'),
+      'action_logged' => ServerActionLogged(
+        id: id,
+        entry: _entry(
+          json['entry'] as Map<String, dynamic>,
+          json['label'] as String?,
+        ),
+      ),
+      _ => null,
     };
   }
+
+  static EventLogEntry _entry(Map<String, dynamic> json, String? label) =>
+      EventLogEntry(
+        id: json['id'] as String,
+        timestamp: DateTime.parse(json['timestamp'] as String),
+        elapsed: Duration(
+          milliseconds: ((json['elapsed_s'] as num) * 1000).round(),
+        ),
+        action: json['action'] as String,
+        transcript: json['transcript'] as String,
+        label: label,
+        confidence: (json['confidence'] as num?)?.toDouble(),
+        source: json['source'] as String?,
+      );
+}
+
+class ServerActionLogged extends ServerEvent {
+  const ServerActionLogged({required String? id, required this.entry})
+    : super(id);
+
+  final EventLogEntry entry;
 }
 
 class ServerStep extends ServerEvent {

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:first_aid_voice_assistant/data/repositories/assistant_repository.dart';
 import 'package:first_aid_voice_assistant/domain/models/chat_message.dart';
+import 'package:first_aid_voice_assistant/domain/models/event_log_entry.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../fakes/services.dart';
@@ -173,5 +174,51 @@ void main() {
     await assistant.dispose();
 
     expect(socket.connection!.closed, isTrue);
+  });
+
+  test('sends when the user finished speaking, with a time zone', () async {
+    assistant.ask(
+      text: 'Uciskam',
+      spokenAt: DateTime.utc(2026, 11, 10, 9, 15, 32),
+    );
+    await settle();
+
+    expect(socket.connection!.lastAsk['spoken_at'], '2026-11-10T09:15:32.000Z');
+  });
+
+  test('passes on logged actions even after the answer is done', () async {
+    final logged = <EventLogEntry>[];
+    assistant.loggedActions.listen(logged.add);
+    final events = <AnswerEvent>[];
+    assistant.ask(text: 'Uciskam').listen(events.add);
+    await settle();
+    final connection = socket.connection!;
+
+    connection.done('Dobrze.');
+    await settle();
+    connection.logged(
+      'CHEST_COMPRESSIONS',
+      at: DateTime.utc(2026, 11, 10, 9, 15, 32),
+      label: 'Uciskanie klatki piersiowej',
+    );
+    await settle();
+
+    expect(events.single, isA<AnswerCompleted>());
+    expect(logged.single.action, 'CHEST_COMPRESSIONS');
+    expect(logged.single.displayName, 'Uciskanie klatki piersiowej');
+    expect(logged.single.timestamp, DateTime.utc(2026, 11, 10, 9, 15, 32));
+  });
+
+  test('an unknown server event does not break the answer', () async {
+    final events = <AnswerEvent>[];
+    assistant.ask(text: 'hej').listen(events.add);
+    await settle();
+    final connection = socket.connection!;
+
+    connection.emit({'type': 'something_new', 'id': connection.lastAsk['id']});
+    connection.done('Dobrze.');
+    await settle();
+
+    expect(events.single, isA<AnswerCompleted>());
   });
 }

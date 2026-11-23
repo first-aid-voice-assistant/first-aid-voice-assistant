@@ -7,4 +7,6 @@ llm:
   params: { model: "ollama_chat/gemma3:1b", api_base: "http://llm:11434", temperature: 0.3 }
 rag: { enabled: false }            # plain models for now
 knowledge: { enabled: true, path: ../../knowledge }   # scenarios from knowledge/ in the prompt
-prompts: { system: prompts/system_v1.md, knowledge: prompts/scenario_v1.yaml }
+event_log: { enabled: false }   # on only for clients that handle the `action_logged` event
+prompts: { system: prompts/system_v1.md, knowledge: prompts/scenario_v1.yaml,
+           event_log: prompts/event_log_v1.yaml }

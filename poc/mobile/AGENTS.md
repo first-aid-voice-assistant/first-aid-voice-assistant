@@ -2,7 +2,7 @@
 
 Project-wide rules (language, domain and safety, data, documentation) are in the root [`AGENTS.md`](../../AGENTS.md); this file adds the rules specific to the mobile app. Run all commands from `poc/mobile/`.
 
-Status: start screen, on-device speech recognition with three selectable engines (Parakeet via sherpa-onnx, Vosk, Whisper via whisper.cpp), answers from the PoC server over a WebSocket, read aloud sentence by sentence while they are streamed (system voice or Piper). The conversation is hands-free: a spoken greeting, the microphone switches off while the assistant speaks and on again by itself, the CPR metronome beats through the compression step.
+Status: start screen, on-device speech recognition with three selectable engines (Parakeet via sherpa-onnx, Vosk, Whisper via whisper.cpp), answers from the PoC server over a WebSocket, read aloud sentence by sentence while they are streamed (system voice or Piper). The conversation is hands-free: a spoken greeting, the microphone switches off while the assistant speaks and on again by itself, the CPR metronome beats through the compression step. Rescue actions recognised by the server (`action_logged`) are kept in an event log on the phone (history sheet, "Dziennik" tab, JSON export).
 
 ## Safety in this part
 

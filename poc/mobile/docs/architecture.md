@@ -3,9 +3,9 @@
 | | |
 |---|---|
 | **Created** | 2026-10-26 |
-| **Version** | 1.2 |
+| **Version** | 1.3 |
 
-> Status: the whole demo loop works – on-device speech recognition with three selectable engines, answers from the PoC server over a WebSocket, read aloud while they are streamed (system voice or Piper); the conversation is hands-free (spoken greeting, the microphone switches on and off by itself around the assistant's speech, continuous CPR metronome).
+> Status: the whole demo loop works – on-device speech recognition with three selectable engines, answers from the PoC server over a WebSocket, read aloud while they are streamed (system voice or Piper); the conversation is hands-free (spoken greeting, the microphone switches on and off by itself around the assistant's speech, continuous CPR metronome); rescue actions recognised by the server are kept in an event log on the phone.
 
 ## Goal of the demo
 
@@ -32,7 +32,7 @@ metronome 110/min (own clock, whole compression step) + reminder after 60 s of s
 |---|---|---|
 | Start | "Demo version" banner, what the demo checks, "Start test conversation" button, note about 112 | done |
 | Test conversation | engine and voice status only while they are being prepared or failed (the chosen engine and voice are in the settings); centred: the start picture (a person talking to the phone) until the first step, then the illustration of the current step (from the server's `step` event, animated, with a 110/min metronome and elapsed time for compressions) and the assistant's latest answer in large type, growing while streamed; below it, centred like the answer, the user's last or partial words; status line ("Asystent myśli / mówi…") with "Przerwij"; bottom row: "112" (opens the phone dialer, works without the server), listening indicator in the middle ("Słucham", grows while the user speaks; "Mówi asystent" while the microphone is off for the assistant's speech; a button only without microphone access – "Włącz mikrofon"), "Historia" | done |
-| History (bottom sheet) | one message per utterance with its time and timings, assistant answers with "głos po X s · model Y s", "przerwano", "przypomnienie"; the spoken greeting is the first message; counting aloud is not shown; updates live | done |
+| History (bottom sheet, 92% of the screen, close button) | two tabs: **Rozmowa** – one message per utterance with its time and timings, assistant answers with "głos po X s · model Y s", "przerwano", "przypomnienie"; the spoken greeting is the first message; counting aloud is not shown; updates live; **Dziennik (N)** – the event log: time, time since the first entry, name of the action and the user's words, newest at the bottom, "Kopiuj dziennik (JSON)" copies it in the shared entry format | done |
 | Settings | speech engine (Parakeet, Vosk, Whisper tiny / base / small); voice (system / Piper) with "Odsłuchaj głos"; server address | done |
 
 ## Speech engines
@@ -72,6 +72,7 @@ The engine is chosen in the settings; the conversation uses the engine chosen wh
 | Metronome clock | `lib/data/services/beat_clock.dart` | `BeatClock`; `TimerBeatClock`: a beat every period counted from the start (no drift from timer delays), independent of the screen and of the conversation | done |
 | Screen | `lib/data/services/screen_wake.dart` | `ScreenWake`; `WakelockScreenWake` (package `wakelock_plus`) keeps the screen on while the conversation is open | done |
 | Emergency call | `lib/data/services/emergency_dialer.dart` | `EmergencyDialer`; `PhoneEmergencyDialer` opens the dialer with 112 (package `url_launcher`, `tel:`); a failure shows "Wybierz numer 112 ręcznie" | done |
+| Event log | `lib/domain/models/event_log_entry.dart`, `lib/data/repositories/event_log_repository.dart` | `EventLogEntry` (format of `docs/project/architecture.md`, plus the action name for showing); `EventLogRepository`: the log in memory, ordered by the time the action was said, entries with a known id and an action repeated right after itself skipped (also after a reconnect), `elapsed` counted from its own first entry, JSON export | done |
 | Answer speaker | `lib/data/repositories/answer_speaker.dart` | `AnswerSpeaker`: takes the streamed text, speaks complete sentences in order, knows what was spoken, stops at once | done |
 | Settings check | `lib/ui/settings/view_models/voice_check_view_model.dart` | "Odsłuchaj głos": prepares the chosen voice (downloads Piper) and reads a test sentence | done |
 
@@ -99,6 +100,7 @@ Naming note: in this guide a *repository* holds the logic and a *service* wraps 
 - **Timings shown:** "głos po X s" – from the end of the user's speech to the first sound of the answer; "model Y s" – time to the first token on the server.
 - **Step picture:** the server sends `step` with the picture name before each answer; the picture stays until a different one arrives, so the metronome and its elapsed time run on while the user keeps doing compressions over several turns. Without the scenarios (or before one is chosen) the scene is shown. The picture names come from `knowledge/scenarios/`; a test checks that every name used there has an illustration.
 - **Metronome:** while the compression picture is shown, the metronome clock (`TimerBeatClock`) beats 110/min without a break – also while the user or the assistant speaks, like the voice prompts of an AED; each beat beeps and starts one press of the picture. The beep is 40 ms long, shorter than the 0.25 s of speech the VAD needs, so it does not start an utterance while the microphone listens.
+- **Event log:** every question carries `spoken_at` (end of the user's speech, UTC). The server sends `action_logged` independently of the answer (it may come after `done`), so `AssistantRepository.loggedActions` is a separate stream and is not tied to the current question. A new entry shows "Zapisano: <czynność>" over the picture for 4 s (silent, so the microphone stays on); tapping it opens the log. Unknown server events are ignored.
 - **No server:** a failed connection, a server error or 30 s without an event ends the answer with a fixed message that is also spoken: no connection, call 112.
 - **Privacy:** no recorded audio is written to disk (Piper's synthesized sentences may pass through a temporary file on iOS).
 - **Errors:** a failed download, missing microphone access or a recognition error is shown in Polish and the screen stays usable.
@@ -119,3 +121,4 @@ Naming note: in this guide a *repository* holds the logic and a *service* wraps 
 | 1.0 | 2026-11-08 | Step screen: illustration of the current step (`step` event) with animation and metronome, latest answer in the middle, conversation history in a bottom sheet, "112" button |
 | 1.1 | 2026-11-09 | Metronome beeps in the rhythm of the compressions while nobody speaks |
 | 1.2 | 2026-11-09 | Hands-free conversation: spoken greeting, microphone off while the assistant speaks and on again by itself (listening indicator instead of a talk button), counting filter, metronome on its own clock through the whole compression step, compression reminder, screen kept on, transcriber keeps only recent audio |
+| 1.3 | 2026-11-10 | Event log: `spoken_at` in `ask`, `action_logged` event, `EventLogRepository`, "Zapisano" notice, history sheet with "Rozmowa" and "Dziennik" tabs (fixed height instead of a draggable sheet linked to a reversed list), JSON export |
