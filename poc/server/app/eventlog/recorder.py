@@ -25,6 +25,10 @@ class EventLogRecorder:
         self._started: datetime | None = None  # time of the first entry
         self._last_action: str | None = None
 
+    def label(self, action: str) -> str | None:
+        """Name of the action as the user should see it (from the action dictionary)."""
+        return self._detector.name(action)
+
     async def record(
         self, user_text: str, history: list[Message], spoken_at: datetime
     ) -> list[EventLogEntry]:

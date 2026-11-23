@@ -86,6 +86,7 @@ class ActionLoggedEvent(BaseModel):
     type: Literal["action_logged"] = "action_logged"
     id: str  # id of the question the action was reported in
     entry: EventLogEntry
+    label: str | None = None
 
 
 ServerEvent = StepEvent | DeltaEvent | DoneEvent | CancelledEvent | ErrorEvent | ActionLoggedEvent
@@ -197,7 +198,9 @@ class _ChatSession:
         history = [Message(role=m.role, content=m.content) for m in msg.history]
         try:
             for entry in await recorder.record(msg.text, history, spoken_at):
-                await self._send(ActionLoggedEvent(id=msg.id, entry=entry))
+                await self._send(
+                    ActionLoggedEvent(id=msg.id, entry=entry, label=recorder.label(entry.action))
+                )
         except asyncio.CancelledError:
             raise
         except WebSocketDisconnect:

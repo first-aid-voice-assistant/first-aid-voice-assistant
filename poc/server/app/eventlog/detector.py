@@ -42,6 +42,11 @@ class ActionDetector:
             f"{i}. {a.name}" + (f" (np. {', '.join(a.synonyms)})" if a.synonyms else "")
             for i, a in enumerate(actions, 1)
         )
+        self._names = {a.code: a.name for a in actions}
+
+    def name(self, code: str) -> str | None:
+        """Name of the action in the dictionary (Polish), for showing the entry to the user."""
+        return self._names.get(code)
 
     async def detect(self, user_text: str, history: list[Message]) -> list[str]:
         """Codes of the actions the user reported in `user_text`, as the model listed them."""

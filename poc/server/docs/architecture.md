@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Created** | 2026-10-26 |
-| **Version** | 0.6 |
+| **Version** | 0.7 |
 
 ## Purpose
 
@@ -50,7 +50,7 @@ Used by the mobile app. Messages are JSON objects with a `type`.
 | server → app | `done` | `id`, `text`, `first_token_ms`, `total_ms` | Full answer and timings |
 | server → app | `cancelled` | `id` | The answer was stopped |
 | server → app | `error` | `id` (or `null` for an invalid message), `message` | The model failed or the message was invalid; the connection stays open |
-| server → app | `action_logged` | `id` (of the question), `entry` (see "Event log entry" in `docs/project/architecture.md`) | A rescue action was recognised in the user's words; sent only when `event_log.enabled`, independently of the answer (it may come after `done`) |
+| server → app | `action_logged` | `id` (of the question), `entry` (see "Event log entry" in `docs/project/architecture.md`), `label` (Polish name of the action from the dictionary, for showing; not part of the entry) | A rescue action was recognised in the user's words; sent only when `event_log.enabled`, independently of the answer (it may come after `done`) |
 
 1. `api/ws.py` reads messages in a loop; each `ask` starts a task that streams the answer, so the loop keeps reading and can cancel it.
 2. `pipeline/prompt.py` builds `[system prompt, *history, question]`. The history comes from the app with every question; the only state the server keeps is the position in the scenario (see Guided scenarios), for as long as the connection lives.
@@ -79,7 +79,7 @@ Records the rescue actions the user reports, in order and with timestamps, inste
 4. `EventLogRecorder` turns the codes into `EventLogEntry`: `timestamp` is `spoken_at` (the time the server received the question if the app sent none), `elapsed_s` counts from the first entry, `transcript` is the user's words. An action repeated right after itself is logged once. Detections run one at a time in the order of the questions.
 5. Each entry goes to the app as an `action_logged` event. A failure of the call is only logged on the server: it does not stop the answer and does not send `error` (that triggers the client's "call 112" fallback).
 
-Limits: only actions from the dictionary are recognised; the extra call per utterance may slow the answer down on a single local model; the recorder's state (last action) is lost on reconnect, so a continuing action may be logged again. A client that does not know `action_logged` must run with `event_log.enabled: false` (the default in the shipped configs).
+Limits: only actions from the dictionary are recognised; the extra call per utterance may slow the answer down on a single local model; the recorder's state (last action) is lost on reconnect, so a continuing action may be logged again. A client that does not know `action_logged` must run with `event_log.enabled: false` (the default in the shipped configs, except the compose default `configs/experiments/qwen25-7b-compose.yaml`, which the mobile app is run against).
 
 ## Request flow (`POST /dev/chat`)
 
@@ -128,3 +128,4 @@ Limits: only actions from the dictionary are recognised; the extra call per utte
 | 0.4 | 2026-11-08 | `step` event with the picture (`media`) of the current instruction, sent before the answer |
 | 0.5 | 2026-11-08 | Event log: `app/eventlog/` (detector, recorder), `spoken_at` in `ask`, `action_logged` event, `event_log` config section, `prompts/event_log_v1.yaml`, `pipeline/completion.py` |
 | 0.6 | 2026-11-08 | `configs/qwen.yaml`; GPU override tuned for a small GPU; command for Claude Code (`/dev`) |
+| 0.7 | 2026-11-10 | `label` (name of the action) in `action_logged`; event log on in the compose default config for the mobile app |

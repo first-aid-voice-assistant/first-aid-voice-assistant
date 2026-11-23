@@ -67,6 +67,7 @@ def test_recognised_action_is_sent_with_the_time_the_user_finished_speaking(
     assert logged["id"] == "a1"
     assert logged["entry"]["action"] == "CHECK_BREATHING"
     assert logged["entry"]["transcript"] == "Sprawdzam oddech"
+    assert logged["label"] == "Sprawdzenie oddechu (patrz, słuchaj, wyczuwaj)"
     assert datetime.fromisoformat(logged["entry"]["timestamp"]) == datetime.fromisoformat(
         "2026-11-08T10:15:32+01:00"
     )
